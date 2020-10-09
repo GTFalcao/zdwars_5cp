@@ -1,0 +1,7 @@
+tyketto's: check 1px holes on ceiling near lava
+
+colosseum: check stairs size at the base, monsters can't walk up
+
+fort frenzy: check gates, check blocking linedefs
+
+fix shadowsphere not being received by heretic when respawning

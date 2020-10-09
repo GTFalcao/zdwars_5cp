@@ -1291,7 +1291,7 @@ script "ZDW5CP Team Actions" ENTER
 			
 		refreshHUD(0);
 		
-		if (playerOnPoint[iAmHere] == 5) {
+		if (playerOnPoint[iAmHere] != 5) {
 			GiveInventory("ControlPointEnergy", 1);
 			if (CheckInventory("ControlPointEnergy") >= 200) {
 				GiveInventory("ControlPointEnergyOverheat", 1);
@@ -1353,7 +1353,7 @@ script "ZDW5CP Team Actions Re" RESPAWN
 			
 		refreshHUD(0);
 		
-		if (playerOnPoint[iAmHere] == 5) {
+		if (playerOnPoint[iAmHere] != 5) {
 			GiveInventory("ControlPointEnergy", 1);
 			if (CheckInventory("ControlPointEnergy") >= 200) {
 				GiveInventory("ControlPointEnergyOverheat", 1);

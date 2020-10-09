@@ -1291,6 +1291,14 @@ script "ZDW5CP Team Actions" ENTER
 			
 		refreshHUD(0);
 		
+		if (playerOnPoint[iAmHere] == 5) {
+			GiveInventory("ControlPointEnergy", 1);
+			if (CheckInventory("ControlPointEnergy") >= 200) {
+				GiveInventory("ControlPointEnergyOverheat", 1);
+				TakeInventory("ControlPointEnergy", 20);
+			}
+		} else TakeInventory("ControlPointEnergy", 5);
+		
 		Delay(10);
 	}
 }
@@ -1344,6 +1352,14 @@ script "ZDW5CP Team Actions Re" RESPAWN
 			teamAction[teamNum(iAmHere)][iAmHere] = 0;
 			
 		refreshHUD(0);
+		
+		if (playerOnPoint[iAmHere] == 5) {
+			GiveInventory("ControlPointEnergy", 1);
+			if (CheckInventory("ControlPointEnergy") >= 200) {
+				GiveInventory("ControlPointEnergyOverheat", 1);
+				TakeInventory("ControlPointEnergy", 20);
+			}
+		} else TakeInventory("ControlPointEnergy", 5);
 		
 		Delay(10);
 	}

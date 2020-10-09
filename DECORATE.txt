@@ -1,5 +1,5 @@
 
-actor ControlPointEnergy : inventory { inventory.maxamount 100 }
+actor ControlPointEnergy : inventory { inventory.maxamount 200 }
 
 actor ControlPointEnergyOverheat : CustomInventory {
 	+INVENTORY.AUTOACTIVATE

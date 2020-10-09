@@ -1,0 +1,77 @@
+
+actor ControlPointEnergy : inventory { inventory.maxamount 100 }
+
+actor ControlPointEnergyOverheat : CustomInventory {
+	+INVENTORY.AUTOACTIVATE
+	+INVENTORY.ALWAYSPICKUP
+	states {
+		Spawn:
+			TNT1 A -1
+			stop
+		Pickup:
+			TNT1 A 0 A_TakeInventory("ControlPointEnergy", 20)
+			TNT1 A 0 A_FireCustomMissile("ControlPointEnergyOverheatMissile",0,0,0,48)
+			stop
+	}
+}
+
+actor ControlPointEnergyOverheatMissile {
+	PROJECTILE
+	+DONTREFLECT
+	+FORCERADIUSDMG
+	+FOILINVUL
+	reactiontime 1
+	states {
+		Spawn:
+			TNT1 A 1 A_Countdown
+			wait
+		Death:
+			TNT1 A 1 A_Explode(2, 512, 0, 0, 512)
+			stop
+	}
+}
+
+// Open Point Arrows
+
+actor WhitePointArrow {
+	scale 3.0
+	gravity 0
+	+NOBLOCKMAP
+	+NOCLIP
+	states {
+		Spawn:
+			PARW A 1
+			PARW "#" 45 bright ThrustThingZ(0, 90, 0, 0)
+			PARW "#" 5 bright A_Stop
+			PARW "#" 15 bright A_SetGravity(0.5)
+			PARW "#" 5 bright A_SetGravity(0)
+			PARW "#" -1 bright A_ChangeFlag("FLOATBOB", true)
+			stop
+	}
+}
+
+actor RedPointArrow : WhitePointArrow {
+	states {
+		Spawn:
+			PARW B 1
+			goto Super::Spawn+1
+	}
+}
+
+actor BluePointArrow : WhitePointArrow {
+	states {
+		Spawn:
+			PARW C 1
+			goto Super::Spawn+1
+	}
+}
+
+actor ColosseumMachoMan 20021 {
+	+SOLID
+	height 69
+	states {
+		Spawn:
+			FIGH A -1
+			stop
+	}
+}

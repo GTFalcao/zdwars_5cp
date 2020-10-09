@@ -1,0 +1,1538 @@
+
+#library "ACS5CP"
+#include "zcommon.acs"
+
+#define	ZDW_GAME_STATE_SOFTLEAD		1
+#define	ZDW_GAME_STATE_HARDLEAD		2
+#define	ZDW_GAME_STATE_WIN			3
+#define	ZDW_GAME_STATE_TEAMSTIED	4
+
+#define	ZDW_WINNING_TEAM_RED	1
+#define	ZDW_WINNING_TEAM_BLUE	2
+
+global	int	1:	gameState5CP;
+global	int	2:	winningTeam5CP;
+
+// team that owns the point. 0 = red, 1 = blue, -1 = neutral
+int pointOwner[5];
+
+// point is open for capture (1) or locked (0)
+int pointOpen[5];
+
+// whether the point is being contested
+int pointState[5];
+
+// the point's "health" - the capture progress
+int pointCaptureProgress[5][2];
+
+// how many seconds it takes to capture each point with 1 player
+// additional players increase the capture's speed by 50% each
+int pointCaptureTime[5] = {20, 25, 40, 25, 20};
+
+#define 	ZDW_TEAM_RED			0
+#define		ZDW_TEAM_BLUE			1
+
+// speed at which capture progress decays when all players leave the point.
+#define		ZDW_POINT_DECAYRATE		4
+
+// speed at which players capture the point. 1 player = 2x speed,
+// 2 players = 3x speed, 3 players = 4x speed etc...
+#define		ZDW_POINT_CAPTURERATE	10
+
+// amount of players on each team
+int playersOnTeam[2];
+
+// keeps track of which team a player belongs to. -1 = no team
+int playerOnTeam[64] = 
+{ 	-1, -1, -1, -1, -1, -1, -1, -1,
+	-1, -1, -1, -1, -1, -1, -1, -1,
+	-1, -1, -1, -1, -1, -1, -1, -1,
+	-1, -1, -1, -1, -1, -1, -1, -1 };
+
+// increased when a player enters a point, decreased when they leave it
+int playersOnPoint[5][2];
+
+// keeps track of where each player is. Point 5 = no point 
+int playerOnPoint[64] = 
+{ 	5, 5, 5, 5, 5, 5, 5, 5,
+	5, 5, 5, 5, 5, 5, 5, 5,
+	5, 5, 5, 5, 5, 5, 5, 5,
+	5, 5, 5, 5, 5, 5, 5, 5 };
+
+// control the warm-up (waiting) timer
+int warmupTimer, warmupDone;
+
+// time in seconds between round start and control point unlocked
+int startMatchTimer;
+
+// time in seconds between point capture and points reopening
+int captureCooldownTimer;
+
+// when a point is captured, all of them are locked for the above time.
+// after that, these are the 2 points that will be reopened
+int pointToOpen[2] = {5, 5};
+
+// Point-related stuff
+str pointParticleName[3] = { "WhiteParticleFountain", "RedParticleFountain", "BlueParticleFountain" };
+str pointArrowName[3] = { "WhitePointArrow", "RedPointArrow", "BluePointArrow" };
+str pointFloortexName[2] = { "DEM3_6", "DEM4_6" };
+str pointMidtexName[3] = { "CP5GR2N", "CP5GR2R", "CP5GR2B" };
+
+// Team names
+str teamString[2] = { "\cgRED", "\chBLUE" };
+
+// Variable for passing actions to players depending on their team
+int teamAction[2][64];
+
+#define	TA_WIN_GAME							1
+#define	TA_ANNOUNCER_CAPTURED_POINT			2
+#define TA_ANNOUNCER_LOST_POINT				3
+#define TA_ANNOUNCER_UNDER_ATTACK			4
+#define TA_ANNOUNCER_LAST_POINT				5
+#define TA_ANNOUNCER_WELL_PLAYED			6
+
+int announcer_wellplayed;
+
+int gameOver;
+
+int pointsOnTeam[3];
+
+
+// HudMessage IDs
+/*
+	//780-784: point status
+	//785-789: capture progress
+	790: point cooldown timer
+	791-792: prepare to fight
+	792: match start timer
+*/
+
+function int debug (void) {
+	return GetCVar("ZDW_5CP_DebugMode");
+}
+	
+function int teamNum (int playerNum) {
+	return GetPlayerInfo(playerNum,PLAYERINFO_TEAM);
+}
+
+// Check if the player was in a point, in case he died/disconnected on it.
+function void checkPlayerOnPoint (int playerNum) {
+	if(playerOnPoint[playerNum] != 5) {
+		playersOnPoint[playerOnPoint[playerNum]][playerOnTeam[playerNum]]--;
+		playerOnPoint[playerNum] = 5;
+	}
+}
+
+// Check if the player is on his inner point.
+function int checkPlayerOnLastPoint (int playerNum) {
+	if( (playerOnTeam[playerNum] == ZDW_TEAM_RED) && (!playerOnPoint[playerNum]) )
+		return 1;
+	else if ( (playerOnTeam[playerNum] == ZDW_TEAM_BLUE) && (playerOnPoint[playerNum] == 4) )
+		return 1;
+		
+	return 0;
+}
+
+// Health regeneration when the player is on his inner point.
+function void healPlayerLastPoint (int amount) {
+	if(GetActorProperty(0,APROP_HEALTH) < GetActorProperty(0,APROP_SPAWNHEALTH)) {
+		FadeTo(20,20,200,0.2,0.0);
+		HealThing(amount);
+		FadeTo(0,0,0,0.0,0.5);
+	}
+}
+
+// (Re)start the level.
+function void initPoints (void) {
+
+	gameState5CP = ZDW_GAME_STATE_TEAMSTIED;
+	winningTeam5CP = 0;
+
+	warmupDone = 0;
+	
+	pointOwner[0] = 0;
+	pointOwner[1] = 0;
+	pointOwner[2] = -1;
+	pointOwner[3] = 1;
+	pointOwner[4] = 1;
+	
+	pointToOpen[0] = 5;
+	pointToOpen[1] = 5;
+	
+	for(int i = 0; i < 5; i++) {
+		pointOpen[i] = 0;
+		pointState[i] = 0;
+		pointCaptureProgress[i][0] = 0;
+		pointCaptureProgress[i][1] = 0;
+		setPointTextures(200+i,pointMidtexName[1+pointOwner[i]]);
+		Thing_Remove(210+i);
+		SpawnSpotForced(StrParam(s:"ControlPoint",i:i,s:"MapMarkerClosed"),215+i,210+i,0);
+	}
+}
+
+// Refresh player's inventory with dummy items for SBARINFO
+function void refreshHUD (int full) {
+
+	// only when points are closed or (re)opened
+	if(full) {
+		SetActivator(0,AAPTR_NULL);
+		for(int k = 0; k < 5; k++) {
+		
+			TakeInventory(StrParam(s:"ControlPoint",i:k,s:"ProgressTrackerRed"),100);
+			TakeInventory(StrParam(s:"ControlPoint",i:k,s:"ProgressTrackerBlue"),100);
+			
+			TakeInventory(StrParam(s:"ControlPoint",i:k,s:"PlayerTrackerRed"),64);
+			TakeInventory(StrParam(s:"ControlPoint",i:k,s:"PlayerTrackerBlue"),64);
+			
+			TakeInventory(StrParam(s:"ControlPoint",i:k,s:"ClosedTracker"),1);
+			TakeInventory(StrParam(s:"ControlPoint",i:k,s:"OpenTracker"),1);
+			if(!pointOpen[k])
+				GiveInventory(StrParam(s:"ControlPoint",i:k,s:"ClosedTracker"),1);
+			else
+				GiveInventory(StrParam(s:"ControlPoint",i:k,s:"OpenTracker"),1);
+			
+			TakeInventory(StrParam(s:"ControlPoint",i:k,s:"TeamTrackerNeutral"),1);
+			TakeInventory(StrParam(s:"ControlPoint",i:k,s:"TeamTrackerRed"),1);
+			TakeInventory(StrParam(s:"ControlPoint",i:k,s:"TeamTrackerBlue"),1);
+			if(pointOwner[k] == -1)
+				GiveInventory(StrParam(s:"ControlPoint",i:k,s:"TeamTrackerNeutral"),1);
+			else if(!pointOwner[k])
+				GiveInventory(StrParam(s:"ControlPoint",i:k,s:"TeamTrackerRed"),1);
+			else if(pointOwner[k])
+				GiveInventory(StrParam(s:"ControlPoint",i:k,s:"TeamTrackerBlue"),1);
+		}
+	}
+	
+	// every 10 tics, check if anything is happening on the points
+	for(int j = 0; j < 5; j++) {
+		if(pointOpen[j]) {
+			TakeInventory(StrParam(s:"ControlPoint",i:j,s:"StateTracker"),1);
+			
+			TakeInventory(StrParam(s:"ControlPoint",i:j,s:"ProgressTrackerRed"),100);
+			TakeInventory(StrParam(s:"ControlPoint",i:j,s:"ProgressTrackerBlue"),100);
+			
+			TakeInventory(StrParam(s:"ControlPoint",i:j,s:"PlayerTrackerRed"),64);
+			TakeInventory(StrParam(s:"ControlPoint",i:j,s:"PlayerTrackerBlue"),64);
+		}
+		if(pointState[j]) {
+			GiveInventory(StrParam(s:"ControlPoint",i:j,s:"StateTracker"),1);
+			
+			if(pointCaptureProgress[j][0] > 0)
+				GiveInventory(StrParam(s:"ControlPoint",i:j,s:"ProgressTrackerRed"),pointCaptureProgress[j][0] * 100 / (pointCaptureTime[j] * 70));
+			else if(pointCaptureProgress[j][1] > 0)
+				GiveInventory(StrParam(s:"ControlPoint",i:j,s:"ProgressTrackerBlue"),pointCaptureProgress[j][1] * 100 / (pointCaptureTime[j] * 70));
+				
+			if(playersOnPoint[j][0] > 0)
+				GiveInventory(StrParam(s:"ControlPoint",i:j,s:"PlayerTrackerRed"),playersOnPoint[j][0]);
+			if(playersOnPoint[j][1] > 0)
+				GiveInventory(StrParam(s:"ControlPoint",i:j,s:"PlayerTrackerBlue"),playersOnPoint[j][1]);
+		}
+	}
+	/*
+	// TEST ONLY
+	str colorTeam;
+	
+	for(int p = 0; p < 5; p++) {
+		switch(pointOwner[p]) {
+		case -1:
+			colorTeam = "\ccNEUTRAL";
+			break;
+			
+		case 0:
+			colorTeam = "\cgRED";
+			break;
+			
+		case 1:
+			colorTeam = "\chBLUE";
+			break;
+		}
+	
+		SetFont("BIGFONT");
+		HudMessageBold(s:"POINT ", i:p+1, s:": ", s:colorTeam;HUDMSG_PLAIN,780+p,CR_GREEN,0.02,0.2 + (0.025 * p),0);
+		HudMessageBold(i:playersOnPoint[p][ZDW_TEAM_RED];HUDMSG_PLAIN,775+p,CR_RED,0.275,0.2 + (0.025 * p),0);
+		HudMessageBold(i:playersOnPoint[p][ZDW_TEAM_BLUE];HUDMSG_PLAIN,785+p,CR_BLUE,0.3,0.2 + (0.025 * p),0);
+	}
+	// END TEST
+	*/
+}
+
+
+/*
+// Old HUD
+function void updateHUD (void) {
+	
+	int colorPoint;
+	str colorTeam;
+	
+	for(int p = 0; p < 5; p++) {
+		if(pointOpen[p])
+			colorPoint = CR_GREEN;
+		else
+			colorPoint = CR_YELLOW;
+			
+		switch(pointOwner[p]) {
+			case -1:
+				colorTeam = "\ccNEUTRAL";
+				break;
+				
+			case 0:
+				colorTeam = "\cgRED";
+				break;
+				
+			case 1:
+				colorTeam = "\chBLUE";
+				break;
+		}
+		
+		SetFont("BIGFONT");
+		HudMessageBold(s:"POINT ", i:p+1, s:": ", s:colorTeam;HUDMSG_PLAIN,780+p,colorPoint,0.02,0.2 + (0.025 * p),0);
+			
+		// Point is being contested. Draw capture progress
+		if(pointState[p]) {
+			SetFont("SMALLFONT");
+			
+			if(pointCaptureProgress[p][ZDW_TEAM_RED] > 0)
+				HudMessageBold(s:"RED: ", i:(100 * pointCaptureProgress[p][ZDW_TEAM_RED] / (70 * pointCaptureTime[p])), s:"%";HUDMSG_PLAIN,785+p,CR_RED,0.28,0.195 + (0.025 * p),0);
+			else if(pointCaptureProgress[p][ZDW_TEAM_BLUE] > 0)
+				HudMessageBold(s:"BLUE: ", i:(100 * pointCaptureProgress[p][ZDW_TEAM_BLUE] / (70 * pointCaptureTime[p])), s:"%";HUDMSG_PLAIN,785+p,CR_BLUE,0.28,0.195 + (0.025 * p),0);
+				
+		}
+		
+		// Erase any capture progress that might be here
+		else
+			HudMessageBold(s:"";HUDMSG_PLAIN,785+p,CR_RED,0.215,0.2 + (0.025 * p),0);
+	}
+}
+*/
+// Command an action to be applied to all players on a team.
+function void setTeamAction (int action, int team) {
+	int playersAffected;
+	
+	for(int i = 0; i < 64; i++) {
+		if(playerOnTeam[i] == team) {
+			teamAction[team][i] = action;
+			playersAffected++;
+		}
+		
+		if(playersAffected >= playersOnTeam[team])
+			break;
+	}
+}
+
+// Count how many points each team owns.
+function void checkWinningTeam (void) {
+	for(int j = 0; j < 3; j++)
+		pointsOnTeam[j] = 0;
+	
+	for(int i = 0; i < 5; i++)
+		pointsOnTeam[1+pointOwner[i]]++;
+		
+	// Red winning
+	if(pointsOnTeam[1] > pointsOnTeam[2]) {
+		winningTeam5CP = ZDW_WINNING_TEAM_RED;
+		
+		if(pointsOnTeam[1] == 5)
+			gameState5CP = ZDW_GAME_STATE_WIN;
+		
+		else if(pointsOnTeam[1] == 4)
+			gameState5CP = ZDW_GAME_STATE_HARDLEAD;
+			
+		else
+			gameState5CP = ZDW_GAME_STATE_SOFTLEAD;
+	}
+	
+	else if(pointsOnTeam[2] > pointsOnTeam[1]) {
+		winningTeam5CP = ZDW_WINNING_TEAM_BLUE;
+		
+		if(pointsOnTeam[2] == 5)
+			gameState5CP = ZDW_GAME_STATE_WIN;
+			
+		else if(pointsOnTeam[2] == 4)
+			gameState5CP = ZDW_GAME_STATE_HARDLEAD;
+			
+		else
+			gameState5CP = ZDW_GAME_STATE_SOFTLEAD;
+	}
+	
+	else {
+		winningTeam5CP = 0;
+		gameState5CP = ZDW_GAME_STATE_TEAMSTIED;
+	}
+}
+// A point was captured.
+function void capturePoint (int point, int team) {
+
+	// Special announcer line if another point had high capture progress
+	for(int j = 0; j < 5; j++) {
+		if(pointCaptureProgress[j][!team] > 85) {
+			announcer_wellplayed = 1;
+			break;
+		}
+	}
+	
+	// Clear the state of all points.
+	for(int i = 0; i < 5; i++) {
+		pointState[i] = 0;
+		pointOpen[i] = 0;
+		pointCaptureProgress[i][ZDW_TEAM_RED] = 0;
+		pointCaptureProgress[i][ZDW_TEAM_BLUE] = 0;
+		Thing_Remove(205+i);
+		Thing_Remove(210+i);
+		SpawnSpotForced(StrParam(s:"ControlPoint",i:i,s:"MapMarkerClosed"),215+i,210+i,0);
+	}
+
+	pointOwner[point] = team;
+	
+	ChangeFloor(200+point,pointFloortexName[team]);
+	if(ThingCountNameSector("ControlPointCeilingColor",0,200+point))
+		ChangeCeiling(200+point,pointFloortexName[team]);
+	
+	setPointTextures(200+point,pointMidtexName[1+pointOwner[point]]);
+	
+	refreshHUD(1);
+	
+	checkWinningTeam();
+	
+	// The team has captured all five points.
+	if(gameState5CP == ZDW_GAME_STATE_WIN) {
+		if(!GetCVar("pointlimit"))
+			ConsoleCommand("pointlimit 100");
+	
+		if(!team) 
+			AmbientSound("announcer/5cp/redwins",255);
+		else
+			AmbientSound("announcer/5cp/bluewins",255);
+			
+		setTeamAction(TA_WIN_GAME, team);
+		
+		return;
+	}
+	
+	captureCooldownTimer = GetCVar("zdw_5cp_capturecooldown");
+			
+	setTeamAction(TA_ANNOUNCER_LOST_POINT, !team);
+	
+	if(announcer_wellplayed) {
+		setTeamAction(TA_ANNOUNCER_WELL_PLAYED, team);
+		announcer_wellplayed = 0;
+	} else
+	setTeamAction(TA_ANNOUNCER_CAPTURED_POINT, team);
+	
+	pointToOpen[0] = point;
+	pointToOpen[1] = point - ((team * 2) - 1);
+	/*
+	switch(point) {
+			
+		default:
+			break;
+	
+		// Red's inner point. Blue wins the game
+		case 0:
+			AmbientSound("announcer/5cp/bluewins",255);
+			if(!GetCVar("pointlimit"))
+				ConsoleCommand("pointlimit 100");
+			setTeamAction(TA_WIN_GAME, ZDW_TEAM_BLUE);
+			break;
+			
+		// Blue's inner point. Red wins the game
+		case 4:
+			AmbientSound("announcer/5cp/redwins",255);
+			if(!GetCVar("pointlimit"))
+				ConsoleCommand("pointlimit 100");
+			setTeamAction(TA_WIN_GAME, ZDW_TEAM_RED);
+			break;
+			
+		// Red's outer point.
+		case 1:
+	
+			captureCooldownTimer = GetCVar("zdw_5cp_capturecooldown");
+			
+			setTeamAction(TA_ANNOUNCER_LOST_POINT, !team);
+			
+			if(announcer_wellplayed) {
+				setTeamAction(TA_ANNOUNCER_WELL_PLAYED, team);
+				announcer_wellplayed = 0;
+			} else
+			setTeamAction(TA_ANNOUNCER_CAPTURED_POINT, team);
+			
+			// Red captured. Lock Red's inner point and unlock middle point
+			if(!team) {
+				pointToOpen[0] = 1;
+				pointToOpen[1] = 2;
+			}
+			
+			// Blue captured. Lock middle point and unlock Red's inner point
+			else {
+				pointToOpen[0] = 0;
+				pointToOpen[1] = 1;
+			}
+			
+			break;
+			
+		// Blue's outer point.
+		case 3:
+			
+			setTeamAction(TA_ANNOUNCER_LOST_POINT, !team);
+			
+			if(announcer_wellplayed) {
+				setTeamAction(TA_ANNOUNCER_WELL_PLAYED, team);
+				announcer_wellplayed = 0;
+			} else
+			setTeamAction(TA_ANNOUNCER_CAPTURED_POINT, team);
+	
+			captureCooldownTimer = GetCVar("zdw_5cp_capturecooldown");
+			
+			// Blue captured. Lock Blue's inner point and unlock middle point
+			if(team) {
+				pointToOpen[0] = 2;
+				pointToOpen[1] = 3;
+			}
+			
+			// Red captured. Lock middle point and unlock Blue's inner point
+			else {
+				pointToOpen[0] = 3;
+				pointToOpen[1] = 4;
+			}
+			
+			break;
+			
+		// Middle point.
+		case 2:
+		
+			setTeamAction(TA_ANNOUNCER_LOST_POINT, !team);
+			
+			if(announcer_wellplayed) {
+				setTeamAction(TA_ANNOUNCER_WELL_PLAYED, team);
+				announcer_wellplayed = 0;
+			} else
+			setTeamAction(TA_ANNOUNCER_CAPTURED_POINT, team);
+	
+			captureCooldownTimer = GetCVar("zdw_5cp_capturecooldown");
+		
+			// Red captured. Lock Red's outer point and unlock Blue's outer point
+			if(!team) {
+				pointToOpen[0] = 2;
+				pointToOpen[1] = 3;
+			}
+			
+			// Blue captured. Lock Blue's outer point and unlock Red's outer point
+			else {
+				pointToOpen[0] = 1;
+				pointToOpen[1] = 2;
+			}
+			
+			break;
+	}
+	*/
+}
+
+function void reopenPoints (void) {
+	// Reopen points according to what was set above.
+	pointOpen[pointToOpen[0]] = 1;
+	pointOpen[pointToOpen[1]] = 1;
+	
+	refreshHUD(1);
+	
+	AmbientSound("announcer/5cp/pointopen",255);
+	
+	// Set point visual effects.
+	SpawnSpotForced(pointParticleName[1+pointOwner[pointToOpen[0]]],200+pointToOpen[0],205+pointToOpen[0],0);
+	SpawnSpotForced(pointParticleName[1+pointOwner[pointToOpen[1]]],200+pointToOpen[1],205+pointToOpen[1],0);
+	
+	Thing_Remove(210+pointToOpen[0]);
+	Thing_Remove(210+pointToOpen[1]);
+	
+	SpawnSpotForced(StrParam(s:"ControlPoint",i:pointToOpen[0],s:"MapMarkerOpen"),215+pointToOpen[0],210+pointToOpen[0],0);
+	SpawnSpotForced(pointArrowName[1+pointOwner[pointToOpen[0]]],215+pointToOpen[0],210+pointToOpen[0],0);
+	SpawnSpotForced(StrParam(s:"ControlPoint",i:pointToOpen[1],s:"MapMarkerOpen"),215+pointToOpen[1],210+pointToOpen[1],0);
+	SpawnSpotForced(pointArrowName[1+pointOwner[pointToOpen[1]]],215+pointToOpen[1],210+pointToOpen[1],0);
+	
+	pointToOpen[0] = 5;
+	pointToOpen[1] = 5;
+}
+
+function void setPointTextures (int point, str texture) {
+	SetLineTexture(point,SIDE_FRONT,TEXTURE_MIDDLE,texture);
+	SetLineTexture(point,SIDE_BACK,TEXTURE_MIDDLE,texture);
+	
+	TranslucentLine(point,48,0);
+}
+
+script 200 (int pointNum, int inorout)
+{
+	// This keeps monsters or any other non-player actor from continuing
+	// Also check if the player executing this is here and alive
+	if( (PlayerNumber() < 0) || (!PlayerInGame(PlayerNumber())) || (GetActorProperty(0,APROP_HEALTH) <= 0) )
+		terminate;
+		
+	// enter point
+	if(inorout) {
+		
+		playersOnPoint[pointNum][teamNum(PlayerNumber())]++;
+		playerOnPoint[PlayerNumber()] = pointNum;
+	
+		// point is locked. wait until it's open or the player leaves it.
+		while( (!pointOpen[pointNum]) && (playerOnPoint[PlayerNumber()] == pointNum) )
+			Delay(20);
+
+		// confirm the point is open and the player is still on it.
+		if( (!pointOpen[pointnum]) || (playerOnPoint[PlayerNumber()] != pointNum) )
+			terminate;
+			
+		// avoid script 201 being executed more than once concurrently
+		if(playersOnPoint[pointNum][ZDW_TEAM_RED] + playersOnPoint[pointNum][ZDW_TEAM_BLUE] > 1)
+			Delay(PlayerNumber() + 1);
+		
+		// point is open and can be contested
+		if( (pointOwner[pointNum] != teamNum(PlayerNumber())) && (!pointState[pointNum]) )
+			ACS_ExecuteAlways(201,0,pointNum);
+	}
+	
+	// leave point
+	else {
+		playersOnPoint[pointNum][teamNum(PlayerNumber())]--;
+		playerOnPoint[PlayerNumber()] = 5;
+	}
+}
+
+script 201 (int pointNum)
+{
+	SetActivator(0,AAPTR_NULL);
+	
+	// point is being contested.
+	pointState[pointNum] = 1;
+	
+	// neutral point
+	if(pointOwner[pointNum] == -1)
+	{
+		// this loop is kept in place by its child loops
+		while(true) {
+			
+			// Red is capturing unopposed.
+			while ( (playersOnPoint[pointnum][ZDW_TEAM_RED] > 0) && (!playersOnPoint[pointnum][ZDW_TEAM_BLUE]) ) {
+			
+				// Blue has capture progress, so decrease that first.
+				if(pointCaptureProgress[pointNum][ZDW_TEAM_BLUE] > 0) {
+					pointCaptureProgress[pointNum][ZDW_TEAM_BLUE] -= ZDW_POINT_CAPTURERATE * (playersOnPoint[pointNum][ZDW_TEAM_RED] + 1);
+					
+					if(pointCaptureProgress[pointNum][ZDW_TEAM_BLUE] < 0)
+						pointCaptureProgress[pointNum][ZDW_TEAM_BLUE] = 0;
+				}
+					
+				// Blue has no capture progress, so increase Red's progress.
+				else {
+					pointCaptureProgress[pointNum][ZDW_TEAM_RED] += ZDW_POINT_CAPTURERATE * (playersOnPoint[pointNum][ZDW_TEAM_RED] + 1);
+					
+					if(pointCaptureProgress[pointNum][ZDW_TEAM_RED] >= 70 * pointCaptureTime[pointNum]) {
+						capturePoint(pointNum,ZDW_TEAM_RED);
+						
+						Delay(10);
+						
+						while (captureCooldownTimer > 0) {
+							SetFont("BIGFONT");
+		
+							if( (captureCooldownTimer % 60) < 10)
+								HudMessageBold(s:"COOLDOWN: \ci",i:(captureCooldownTimer / 60),s:":0",i:(captureCooldownTimer % 60);HUDMSG_FADEOUT,790,CR_GREEN,1.5,0.22,1.5,0.5);
+							else
+								HudMessageBold(s:"COOLDOWN: \ci",i:(captureCooldownTimer / 60),s:":",i:(captureCooldownTimer % 60);HUDMSG_FADEOUT,790,CR_GREEN,1.5,0.22,1.5,0.5);
+		
+							captureCooldownTimer--;
+	
+							Delay(35);
+						}
+						
+						if( (pointToOpen[0] != 5) && (pointToOpen[1] != 5) )
+							reopenPoints();
+						
+						terminate;
+					}
+				}
+				
+				//updateHUD();
+				
+				Delay(10);
+				
+				if( (gameOver) || (!pointOpen[pointNum]) )
+					terminate;
+			}
+			
+			// Blue is capturing unopposed.
+			while ( (playersOnPoint[pointnum][ZDW_TEAM_BLUE] > 0) && (!playersOnPoint[pointnum][ZDW_TEAM_RED]) ) {
+			
+				// Red has capture progress, so decrease that first.
+				if(pointCaptureProgress[pointNum][ZDW_TEAM_RED] > 0) {
+					pointCaptureProgress[pointNum][ZDW_TEAM_RED] -= ZDW_POINT_CAPTURERATE * (playersOnPoint[pointNum][ZDW_TEAM_BLUE] + 1);
+					
+					if(pointCaptureProgress[pointNum][ZDW_TEAM_RED] < 0)
+						pointCaptureProgress[pointNum][ZDW_TEAM_RED] = 0;
+				}
+					
+				// Red has no capture progress, so increase Blue's progress.
+				else {
+					pointCaptureProgress[pointNum][ZDW_TEAM_BLUE] += ZDW_POINT_CAPTURERATE * (playersOnPoint[pointNum][ZDW_TEAM_BLUE] + 1);
+					
+					if(pointCaptureProgress[pointNum][ZDW_TEAM_BLUE] >= 70 * pointCaptureTime[pointNum]) {
+						capturePoint(pointNum,ZDW_TEAM_BLUE);
+						
+						Delay(10);
+						
+						while (captureCooldownTimer > 0) {
+							SetFont("BIGFONT");
+		
+							if( (captureCooldownTimer % 60) < 10)
+								HudMessageBold(s:"COOLDOWN: \ci",i:(captureCooldownTimer / 60),s:":0",i:(captureCooldownTimer % 60);HUDMSG_FADEOUT,790,CR_GREEN,1.5,0.22,1.5,0.5);
+							else
+								HudMessageBold(s:"COOLDOWN: \ci",i:(captureCooldownTimer / 60),s:":",i:(captureCooldownTimer % 60);HUDMSG_FADEOUT,790,CR_GREEN,1.5,0.22,1.5,0.5);
+		
+							captureCooldownTimer--;
+	
+							Delay(35);
+						}
+						
+						if( (pointToOpen[0] != 5) && (pointToOpen[1] != 5) )
+							reopenPoints();
+							
+						terminate;
+					}
+				}
+				
+				//updateHUD();
+				
+				Delay(10);
+				
+				if( (gameOver) || (!pointOpen[pointNum]) )
+					terminate;
+			}
+			
+			// No players of either team on the point.
+			if( (!playersOnPoint[pointnum][ZDW_TEAM_RED]) && (!playersOnPoint[pointnum][ZDW_TEAM_BLUE]) ) {
+			
+				// If there is any capture progress, it will decay slowly.
+				if(pointCaptureProgress[pointNum][ZDW_TEAM_RED] > 0)
+					pointCaptureProgress[pointNum][ZDW_TEAM_RED] -= ZDW_POINT_DECAYRATE;
+				else if(pointCaptureProgress[pointNum][ZDW_TEAM_BLUE] > 0)
+					pointCaptureProgress[pointNum][ZDW_TEAM_BLUE] -= ZDW_POINT_DECAYRATE;
+					
+				// If not, the point is no longer being contested.
+				else {
+					pointState[pointNum] = 0;
+					//updateHUD();
+					terminate;
+				}
+			}
+			
+			// If there are players of both teams on the point, nothing happens.
+			
+			//updateHUD();
+				
+			Delay(10);
+				
+			if( (gameOver) || (!pointOpen[pointNum]) )
+				terminate;
+		
+		}
+	}
+	
+	// Red team owns the point
+	else if(!pointOwner[pointNum])
+	{
+		// Announcer warns Red team
+		if(!pointNum)
+			setTeamAction(TA_ANNOUNCER_LAST_POINT,0);
+			
+		else
+			setTeamAction(TA_ANNOUNCER_UNDER_ATTACK,0);
+		
+		// this loop is kept in place by its child loops
+		while(true) {
+			
+			// Red is defending unopposed.
+			while ( (playersOnPoint[pointnum][ZDW_TEAM_RED] > 0) && (!playersOnPoint[pointnum][ZDW_TEAM_BLUE]) ) {
+			
+				// Blue has capture progress, so decrease that.
+				if(pointCaptureProgress[pointNum][ZDW_TEAM_BLUE] > 0) {
+					pointCaptureProgress[pointNum][ZDW_TEAM_BLUE] -= ZDW_POINT_CAPTURERATE * (playersOnPoint[pointNum][ZDW_TEAM_RED] + 1);
+					
+					if(pointCaptureProgress[pointNum][ZDW_TEAM_BLUE] < 0)
+						pointCaptureProgress[pointNum][ZDW_TEAM_BLUE] = 0;
+				}
+				
+				//updateHUD();
+				
+				Delay(10);
+				
+				if( (gameOver) || (!pointOpen[pointNum]) )
+					terminate;
+			}
+			
+			// Blue is capturing unopposed.
+			while ( (playersOnPoint[pointnum][ZDW_TEAM_BLUE] > 0) && (!playersOnPoint[pointnum][ZDW_TEAM_RED]) ) {
+					
+				pointCaptureProgress[pointNum][ZDW_TEAM_BLUE] += ZDW_POINT_CAPTURERATE * (playersOnPoint[pointNum][ZDW_TEAM_BLUE] + 1);
+				
+				if(pointCaptureProgress[pointNum][ZDW_TEAM_BLUE] >= 70 * pointCaptureTime[pointNum]) {
+					capturePoint(pointNum,ZDW_TEAM_BLUE);
+						
+					Delay(10);
+					
+					while (captureCooldownTimer > 0) {
+						SetFont("BIGFONT");
+	
+						if( (captureCooldownTimer % 60) < 10)
+							HudMessageBold(s:"COOLDOWN: \ci",i:(captureCooldownTimer / 60),s:":0",i:(captureCooldownTimer % 60);HUDMSG_FADEOUT,790,CR_GREEN,1.5,0.22,1.5,0.5);
+						else
+							HudMessageBold(s:"COOLDOWN: \ci",i:(captureCooldownTimer / 60),s:":",i:(captureCooldownTimer % 60);HUDMSG_FADEOUT,790,CR_GREEN,1.5,0.22,1.5,0.5);
+	
+						captureCooldownTimer--;
+
+						Delay(35);
+					}
+					
+					if( (pointToOpen[0] != 5) && (pointToOpen[1] != 5) )
+						reopenPoints();
+							
+					terminate;
+				}
+				
+				//updateHUD();
+				
+				Delay(10);
+				
+				if( (gameOver) || (!pointOpen[pointNum]) )
+					terminate;
+			}
+			
+			// No players of either team on the point.
+			if( (!playersOnPoint[pointnum][ZDW_TEAM_RED]) && (!playersOnPoint[pointnum][ZDW_TEAM_BLUE]) ) {
+			
+				// If there is any capture progress, it will decay slowly.
+				if(pointCaptureProgress[pointNum][ZDW_TEAM_BLUE] > 0)
+					pointCaptureProgress[pointNum][ZDW_TEAM_BLUE] -= ZDW_POINT_DECAYRATE;
+					
+				// If not, the point is no longer being contested.
+				else {
+					pointState[pointNum] = 0;
+					//updateHUD();
+					terminate;
+				}
+			}
+			
+			// If there are players of both teams on the point, nothing happens.
+			
+			//updateHUD();
+				
+			Delay(10);
+			
+			if( (gameOver) || (!pointOpen[pointNum]) )
+				terminate;
+		
+		}
+	}
+	
+	// Blue team owns the point
+	else if(pointOwner[pointNum])
+	{
+		// Announcer warns Blue team
+		if(pointNum == 4)
+			setTeamAction(TA_ANNOUNCER_LAST_POINT,1);
+			
+		else
+			setTeamAction(TA_ANNOUNCER_UNDER_ATTACK,1);
+		
+		// this loop is kept in place by its child loops
+		while(true) {
+			
+			// Blue is defending unopposed.
+			while ( (playersOnPoint[pointnum][ZDW_TEAM_BLUE] > 0) && (!playersOnPoint[pointnum][ZDW_TEAM_RED]) ) {
+			
+				// Red has capture progress, so decrease that.
+				if(pointCaptureProgress[pointNum][ZDW_TEAM_RED] > 0) {
+					pointCaptureProgress[pointNum][ZDW_TEAM_RED] -= ZDW_POINT_CAPTURERATE * (playersOnPoint[pointNum][ZDW_TEAM_BLUE] + 1);
+					
+					if(pointCaptureProgress[pointNum][ZDW_TEAM_RED] < 0)
+						pointCaptureProgress[pointNum][ZDW_TEAM_RED] = 0;
+				}
+				
+				//updateHUD();
+				
+				Delay(10);
+				
+				if( (gameOver) || (!pointOpen[pointNum]) )
+					terminate;
+			}
+			
+			// Red is capturing unopposed.
+			while ( (playersOnPoint[pointnum][ZDW_TEAM_RED] > 0) && (!playersOnPoint[pointnum][ZDW_TEAM_BLUE]) ) {
+					
+				pointCaptureProgress[pointNum][ZDW_TEAM_RED] += ZDW_POINT_CAPTURERATE * (playersOnPoint[pointNum][ZDW_TEAM_RED] + 1);
+				
+				if(pointCaptureProgress[pointNum][ZDW_TEAM_RED] >= 70 * pointCaptureTime[pointNum]) {
+					capturePoint(pointNum,ZDW_TEAM_RED);
+						
+					Delay(10);
+					
+					while (captureCooldownTimer > 0) {
+						SetFont("BIGFONT");
+	
+						if( (captureCooldownTimer % 60) < 10)
+							HudMessageBold(s:"COOLDOWN: \ci",i:(captureCooldownTimer / 60),s:":0",i:(captureCooldownTimer % 60);HUDMSG_FADEOUT,790,CR_GREEN,1.5,0.22,1.5,0.5);
+						else
+							HudMessageBold(s:"COOLDOWN: \ci",i:(captureCooldownTimer / 60),s:":",i:(captureCooldownTimer % 60);HUDMSG_FADEOUT,790,CR_GREEN,1.5,0.22,1.5,0.5);
+	
+						captureCooldownTimer--;
+
+						Delay(35);
+					}
+					
+					if( (pointToOpen[0] != 5) && (pointToOpen[1] != 5) )
+						reopenPoints();
+							
+					terminate;
+				}
+				
+				//updateHUD();
+				
+				Delay(10);
+				
+				if( (gameOver) || (!pointOpen[pointNum]) )
+					terminate;
+			}
+			
+			// No players of either team on the point.
+			if( (!playersOnPoint[pointnum][ZDW_TEAM_RED]) && (!playersOnPoint[pointnum][ZDW_TEAM_BLUE]) ) {
+			
+				// If there is any capture progress, it will decay slowly.
+				if(pointCaptureProgress[pointNum][ZDW_TEAM_RED] > 0)
+					pointCaptureProgress[pointNum][ZDW_TEAM_RED] -= ZDW_POINT_DECAYRATE;
+					
+				// If not, the point is no longer being contested.
+				else {
+					pointState[pointNum] = 0;
+					//updateHUD();
+					terminate;
+				}
+			}
+			
+			// If there are players of both teams on the point, nothing happens.
+			
+			//updateHUD();
+				
+			Delay(10);
+			
+			if( (gameOver) || (!pointOpen[pointNum]) )
+				terminate;
+		
+		}
+	}
+}
+
+// Player joins and is frozen until the warm up timer is up.
+script "ZDW5CP Countdown" ENTER
+{
+	if(GameType() != 4) 
+		terminate;
+		
+	// Add the player to their team's count.
+	playersOnTeam[teamNum(PlayerNumber())]++;
+	playerOnTeam[PlayerNumber()] = teamNum(PlayerNumber());
+		
+	if( (warmupDone) && (PlayerCount() > 1) ) {
+		refreshHUD(1);
+		terminate;
+	}
+		
+	SetPlayerProperty(0, 1, PROP_TOTALLYFROZEN);
+	Delay(10);
+	
+	while(warmupTimer > 0) {
+		SetPlayerProperty(0, 1, PROP_TOTALLYFROZEN);
+		Delay(35);
+	}
+	
+	// Unfreeze the player and reset their mana
+	SetPlayerProperty(0, 0, PROP_TOTALLYFROZEN);
+		
+	TakeInventory("Mana",GetCVar("ZDW_ManaMaxAmount"));
+	TakeInventory("HeroMana",GetCVar("ZDW_HeroManaMaxAmount"));
+	
+	GiveInventory("Mana",GetCVar("ZDW_5CP_StartingMana"));
+	GiveInventory("HeroMana",GetCVar("ZDW_5CP_StartingHeroMana"));
+	
+	refreshHUD(1);
+}
+
+// Player joins and is frozen until the warm up timer is up.
+script "ZDW5CP Countdown Re" RESPAWN
+{
+	if(GameType() != 4) 
+		terminate;
+	
+	checkPlayerOnPoint(PlayerNumber());
+		
+	if( (warmupDone) && (PlayerCount() > 1) ) {
+		refreshHUD(1);
+		terminate;
+	}
+		
+	SetPlayerProperty(0, 1, PROP_TOTALLYFROZEN);
+	Delay(10);
+	
+	while(warmupTimer > 0) {
+		SetPlayerProperty(0, 1, PROP_TOTALLYFROZEN);
+		Delay(35);
+	}
+	
+	// Unfreeze the player and reset their mana
+	SetPlayerProperty(0, 0, PROP_TOTALLYFROZEN);
+		
+	TakeInventory("Mana",GetCVar("ZDW_ManaMaxAmount"));
+	TakeInventory("HeroMana",GetCVar("ZDW_HeroManaMaxAmount"));
+	
+	GiveInventory("Mana",GetCVar("ZDW_5CP_StartingMana"));
+	GiveInventory("HeroMana",GetCVar("ZDW_5CP_StartingHeroMana"));
+	
+	refreshHUD(1);
+}
+
+script "ZDW5CP Player Death" DEATH
+{
+	// Player died on a Point.
+	checkPlayerOnPoint(PlayerNumber());
+}
+
+script "ZDW5CP Player Disconnect" (int gone) DISCONNECT
+{
+	// Player disconnected on a Point.
+	checkPlayerOnPoint(gone);
+	
+	// Remove player from their team's count.
+	if(playerOnTeam[gone] != -1) {
+		playersOnTeam[playerOnTeam[gone]]--;
+		playerOnTeam[gone] = -1;
+	}
+}
+
+script "ZDW5CP Timelimit" OPEN
+{
+	Delay(1);
+	
+	if( (GameType() != 4) || (!GetCVar("timelimit")) )
+		terminate;
+		
+	//Log(s:"timelimit active");
+	
+	int timelimit = GetCVar("timelimit");
+	
+	// Zandronum apparently stores timelimit as fixed point
+	if(timelimit >= 65536)
+		timelimit >>= 16;
+		
+	Delay((35 * 60 * timelimit) - 15);
+		
+	Log(s:"Timelimit hit.");
+	
+	// Timelimit hit.
+	int gamewinner = -1;
+	
+	while(pointOwner[2] == -1)
+		Delay(15);
+	
+	gamewinner = pointOwner[2];
+	
+	if(!GetCVar("pointlimit"))
+		ConsoleCommand("pointlimit 100");
+	
+	if(gamewinner)
+		AmbientSound("announcer/5cp/bluewins",255);
+	else
+		AmbientSound("announcer/5cp/redwins",255);
+		
+	setTeamAction(TA_WIN_GAME, gamewinner);
+}
+
+// Game start script
+script "ZDW5CP Game Start" OPEN
+{
+	if(GameType() != 4)
+		terminate;
+		
+	warmupDone = 0;
+	
+	startMatchTimer = GetCVar("zdw_5cp_warmupcountdown");
+	
+	while(!PlayerCount())
+		Delay(10);
+		
+	SetCVar("ZDW_ManaRegenerationSpeed",0);
+	SetCVar("ZDW_HeroManaRegenerationSpeed",0);
+		 
+	warmupTimer = GetCVar("zdw_5cp_startcountdown");
+	InitPoints();
+	
+	AmbientSound("announcer/5cp/preparetofight",255);
+	
+	while(warmupTimer > 0) {
+		SetFont("BIGFONT");
+		HudMessageBold(s:"CAPTURE THE POINTS";HUDMSG_PLAIN,791,CR_RED,1.5,0.325,3.0);
+		SetFont("BIGFONT");
+		HudMessageBold(s:"match begins in: ",i:warmupTimer;HUDMSG_PLAIN,792,CR_RED,1.5,0.375,3.0);
+		
+		Delay(35);
+		
+		warmupTimer--;
+		
+		if(warmupTimer == 3)
+			AmbientSound("announcer/5cp/three",255);
+		else if(warmupTimer == 2)
+			AmbientSound("announcer/5cp/two",255);
+		else if(warmupTimer == 1)
+			AmbientSound("announcer/5cp/one",255);
+	}
+	
+	// Timer is up. Begin the round
+	
+	SetFont("BIGFONT");
+	HudMessageBold(s:"FIGHT!";HUDMSG_FADEOUT,791,CR_RED,1.5,0.35,2.0,3.0);
+	HudMessageBold(s:"";HUDMSG_PLAIN,792,CR_RED,1.5,0.3,0.1);
+	
+	AmbientSound("announcer/5cp/fight",255);
+	
+	refreshHUD(1);
+		
+	warmupDone = 1;
+	
+	SetCVar("ZDW_ManaRegenerationSpeed",0);
+	SetCVar("ZDW_HeroManaRegenerationSpeed",0);
+	
+	while( (startMatchTimer > 0) && (PlayerCount() > 0) ) {
+	
+		SetFont("BIGFONT");
+		
+		if( (startMatchTimer % 60) < 10)
+			HudMessageBold(s:"POINT OPENS IN: \ci",i:(startMatchTimer / 60),s:":0",i:(startMatchTimer % 60);HUDMSG_FADEOUT,792,CR_GREEN,1.5,0.22,1.5,0.5);
+		else
+			HudMessageBold(s:"POINT OPENS IN: \ci",i:(startMatchTimer / 60),s:":",i:(startMatchTimer % 60);HUDMSG_FADEOUT,792,CR_GREEN,1.5,0.22,1.5,0.5);
+			
+		switch(startMatchTimer) {
+			case 60:
+				AmbientSound("announcer/5cp/start60s",255);
+				break;
+				
+			case 5:
+				AmbientSound("announcer/5cp/five",255);
+				break;
+				
+			case 4:
+				AmbientSound("announcer/5cp/four",255);
+				break;
+				
+			case 3:
+				AmbientSound("announcer/5cp/three",255);
+				break;
+				
+			case 2:
+				AmbientSound("announcer/5cp/two",255);
+				break;
+				
+			case 1:
+				AmbientSound("announcer/5cp/one",255);
+			
+			default:
+				break;
+				
+		}
+		
+		startMatchTimer--;
+	
+		Delay(35);
+	}
+	
+	if(!PlayerCount())
+		restart;
+	
+	Delay(15);
+	
+	// open the middle point
+	AmbientSound("announcer/5cp/pointopen",255);
+	pointOpen[2] = 1;
+	SpawnSpotForced(pointParticleName[0],202,207,0);
+	
+	Thing_Remove(212);
+	SpawnSpotForced("ControlPoint2MapMarkerOpen",217,212,0);
+	SpawnSpotForced(pointArrowName[0],217,212,0);
+	
+	refreshHUD(1);
+	
+	while(PlayerCount() > 0)
+		Delay(30);
+		
+	restart;
+}
+
+int manaRegenRunning[64];
+
+script "Team Mana Balance" ENTER
+{	
+	int iAmHere = PlayerNumber();
+	
+	int manaDelay;
+	
+	Delay(1);
+	
+	// This is a safety check.
+	if(manaRegenRunning[iAmHere]) {
+		manaRegenRunning[iAmHere] = 0;
+		Delay(17);
+		
+		// Another copy of the script is already running. Let's drop this one
+		if(manaRegenRunning[iAmHere])
+			terminate;
+	}
+	
+	while((PlayerInGame(iAmHere)) && (GetActorProperty(0,APROP_HEALTH) > 0))
+	{
+		// If the other team has less players, set the delay to the default value.
+		if( (playersOnTeam[playerOnTeam[PlayerNumber()]] >= playersOnTeam[!playerOnTeam[PlayerNumber()]]) || (!playersOnTeam[playerOnTeam[PlayerNumber()]]) )
+			manaDelay = 16;
+		else {
+			int myTeam = playersOnTeam[playerOnTeam[PlayerNumber()]] << 16;
+			int enemyTeam = playersOnTeam[!playerOnTeam[PlayerNumber()]] << 16;
+			
+			manaDelay = (16 * FixedSqrt(FixedDiv(myTeam,enemyTeam))) >> 16;
+		}
+		
+		manaRegenRunning[iAmHere] = 1;
+		
+		Delay(manaDelay);
+		
+		GiveInventory("Mana",1);
+		
+		if(debug()) {
+			SetFont("BIGFONT");
+			HudMessage(s:"i am on point: \ck", i:playerOnPoint[iAmHere]; HUDMSG_PLAIN, 224, CR_GREEN,0.9,0.025,0);
+			HudMessage(s:"i am on team: \cc", s:teamString[PlayerOnTeam[iAmHere]]; HUDMSG_PLAIN, 225, CR_GREEN,0.9,0.05,0);
+		}
+	}
+	
+	manaRegenRunning[iAmHere] = 0;
+}
+
+script "Team Mana Balance Re" RESPAWN
+{	
+	int iAmHere = PlayerNumber();
+	
+	int manaDelay;
+	
+	Delay(1);
+	
+	// This is a safety check.
+	if(manaRegenRunning[iAmHere]) {
+		manaRegenRunning[iAmHere] = 0;
+		Delay(17);
+		
+		// Another copy of the script is already running. Let's drop this one
+		if(manaRegenRunning[iAmHere])
+			terminate;
+	}
+	
+	while((PlayerInGame(iAmHere)) && (GetActorProperty(0,APROP_HEALTH) > 0))
+	{
+		// If the other team has less players, set the delay to the default value.
+		if( (playersOnTeam[playerOnTeam[PlayerNumber()]] >= playersOnTeam[!playerOnTeam[PlayerNumber()]]) || (!playersOnTeam[playerOnTeam[PlayerNumber()]]) )
+			manaDelay = 16;
+		else {
+			int myTeam = playersOnTeam[playerOnTeam[PlayerNumber()]] << 16;
+			int enemyTeam = playersOnTeam[!playerOnTeam[PlayerNumber()]] << 16;
+			
+			manaDelay = (16 * FixedSqrt(FixedDiv(myTeam,enemyTeam))) >> 16;
+		}
+		
+		manaRegenRunning[iAmHere] = 1;
+		
+		Delay(manaDelay);
+		
+		GiveInventory("Mana",1);
+		
+		if(debug()) {
+			SetFont("BIGFONT");
+			HudMessage(s:"i am on point: \ck", i:playerOnPoint[iAmHere]; HUDMSG_PLAIN, 224, CR_GREEN,0.9,0.025,0);
+			HudMessage(s:"i am on team: \cc", s:teamString[playerOnTeam[iAmHere]]; HUDMSG_PLAIN, 225, CR_GREEN,0.9,0.05,0);
+		}
+	}
+		
+	manaRegenRunning[iAmHere] = 0;
+}
+
+int heroManaRegenRunning[64];
+
+script "Team Hero Mana Balance" ENTER
+{	
+	int iAmHere = PlayerNumber();
+	
+	int heroManaDelay;
+	
+	Delay(1);
+	
+	// This is a safety check.
+	if(heroManaRegenRunning[iAmHere]) {
+		heroManaRegenRunning[iAmHere] = 0;
+		Delay(71);
+		
+		// Another copy of the script is already running. Let's drop this one
+		if(heroManaRegenRunning[iAmHere])
+			terminate;
+	}
+	
+	while((PlayerInGame(iAmHere)) && (GetActorProperty(0,APROP_HEALTH) > 0))
+	{
+		// If the other team has less players, set the delay to the default value.
+		if( (playersOnTeam[playerOnTeam[PlayerNumber()]] >= playersOnTeam[!playerOnTeam[PlayerNumber()]]) || (!playersOnTeam[playerOnTeam[PlayerNumber()]]) )
+			heroManaDelay = 70;
+		else {
+			int myTeam = playersOnTeam[playerOnTeam[PlayerNumber()]] << 16;
+			int enemyTeam = playersOnTeam[!playerOnTeam[PlayerNumber()]] << 16;
+			
+			heroManaDelay = (70 * FixedSqrt(FixedDiv(myTeam,enemyTeam))) >> 16;
+		}
+		
+		heroManaRegenRunning[iAmHere] = 1;
+		
+		Delay(heroManaDelay);
+		
+		GiveInventory("HeroMana",1);
+		
+		if(checkPlayerOnLastPoint(iAmHere))
+			healPlayerLastPoint(15);
+	}
+		
+	heroManaRegenRunning[iAmHere] = 0;
+}
+
+script "Team Hero Mana Balance Re" RESPAWN
+{	
+	int iAmHere = PlayerNumber();
+	
+	int heroManaDelay;
+	
+	Delay(1);
+	
+	// This is a safety check.
+	if(heroManaRegenRunning[iAmHere]) {
+		heroManaRegenRunning[iAmHere] = 0;
+		Delay(71);
+		
+		// Another copy of the script is already running. Let's drop this one
+		if(heroManaRegenRunning[iAmHere])
+			terminate;
+	}
+	
+	while((PlayerInGame(iAmHere)) && (GetActorProperty(0,APROP_HEALTH) > 0))
+	{
+		// If the other team has less players, set the delay to the default value.
+		if( (playersOnTeam[playerOnTeam[PlayerNumber()]] >= playersOnTeam[!playerOnTeam[PlayerNumber()]]) || (!playersOnTeam[playerOnTeam[PlayerNumber()]]) )
+			heroManaDelay = 70;
+		else {
+			int myTeam = playersOnTeam[playerOnTeam[PlayerNumber()]] << 16;
+			int enemyTeam = playersOnTeam[!playerOnTeam[PlayerNumber()]] << 16;
+			
+			heroManaDelay = (70 * FixedSqrt(FixedDiv(myTeam,enemyTeam))) >> 16;
+		}
+		
+		heroManaRegenRunning[iAmHere] = 1;
+		
+		Delay(heroManaDelay);
+		
+		GiveInventory("HeroMana",1);
+		
+		if(checkPlayerOnLastPoint(iAmHere))
+			healPlayerLastPoint(15);
+	}
+		
+	heroManaRegenRunning[iAmHere] = 0;
+}
+
+// This script needs to be run for each player for team-specific actions
+
+script "ZDW5CP Team Actions" ENTER
+{
+	if(GameType() != 4)
+		terminate;
+	
+	int iAmHere = PlayerNumber();
+	
+	while((PlayerInGame(iAmHere)) && (GetActorProperty(0,APROP_HEALTH) > 0))
+	{
+		switch(teamAction[teamNum(iAmHere)][iAmHere]) {
+			default:
+			case 0:
+				break;
+				
+			case TA_WIN_GAME:
+				if(!gameOver) {
+					Team_GivePoints(teamNum(iAmHere),GetCVar("pointlimit"),0);
+					gameOver = 1;
+				}
+				break;
+				
+			case TA_ANNOUNCER_CAPTURED_POINT:
+				LocalAmbientSound("announcer/5cp/teamcaptured",255);
+				break;
+				
+			case TA_ANNOUNCER_LOST_POINT:
+				LocalAmbientSound("announcer/5cp/enemycaptured",255);
+				break;
+				
+			case TA_ANNOUNCER_UNDER_ATTACK:
+				LocalAmbientSound("announcer/5cp/underattack",255);
+				break;
+				
+			case TA_ANNOUNCER_LAST_POINT:
+				LocalAmbientSound("announcer/5cp/finalpoint",255);
+				break;
+				
+			case TA_ANNOUNCER_WELL_PLAYED:
+				LocalAmbientSound("announcer/5cp/wellplayed",255);
+				break;
+			
+		}
+		
+		if(teamAction[teamNum(iAmHere)][iAmHere] > 0)
+			teamAction[teamNum(iAmHere)][iAmHere] = 0;
+			
+		refreshHUD(0);
+		
+		Delay(10);
+	}
+}
+
+// This script needs to be run for each player for team-specific actions
+
+script "ZDW5CP Team Actions Re" RESPAWN
+{
+	if(GameType() != 4)
+		terminate;
+	
+	int iAmHere = PlayerNumber();
+	
+	while((PlayerInGame(iAmHere)) && (GetActorProperty(0,APROP_HEALTH) > 0))
+	{
+		switch(teamAction[teamNum(iAmHere)][iAmHere]) {
+			default:
+			case 0:
+				break;
+				
+			case TA_WIN_GAME:
+				if(!gameOver) {
+					Team_GivePoints(teamNum(iAmHere),GetCVar("pointlimit"),0);
+					gameOver = 1;
+				}
+				break;
+				
+			case TA_ANNOUNCER_CAPTURED_POINT:
+				LocalAmbientSound("announcer/5cp/teamcaptured",255);
+				break;
+				
+			case TA_ANNOUNCER_LOST_POINT:
+				LocalAmbientSound("announcer/5cp/enemycaptured",255);
+				break;
+				
+			case TA_ANNOUNCER_UNDER_ATTACK:
+				LocalAmbientSound("announcer/5cp/underattack",255);
+				break;
+				
+			case TA_ANNOUNCER_LAST_POINT:
+				LocalAmbientSound("announcer/5cp/finalpoint",255);
+				break;
+				
+			case TA_ANNOUNCER_WELL_PLAYED:
+				LocalAmbientSound("announcer/5cp/wellplayed",255);
+				break;
+			
+		}
+		
+		if(teamAction[teamNum(iAmHere)][iAmHere] > 0)
+			teamAction[teamNum(iAmHere)][iAmHere] = 0;
+			
+		refreshHUD(0);
+		
+		Delay(10);
+	}
+}
+
+
+script "ZDW5CP Debug script" OPEN
+{
+	while(debug()) {
+		SetFont("BIGFONT");
+		
+		for(int pt = 0; pt < 5; pt++)
+			HudMessageBold(s:"players on point ", i:pt, s:": \cg", i:playersOnPoint[pt][ZDW_TEAM_RED], s:" \ch", i:playersOnPoint[pt][ZDW_TEAM_BLUE]; HUDMSG_PLAIN, 226+pt, CR_GREEN,0.9,0.1+(pt*0.025),0);
+			
+		HudMessageBold(s:"players on team \cg", i:ZDW_TEAM_RED, s:": \cd", i:playersOnTeam[ZDW_TEAM_RED]; HUDMSG_PLAIN, 231, CR_YELLOW, 0.9, 0.25, 0);
+		HudMessageBold(s:"players on team \ch", i:ZDW_TEAM_BLUE, s:": \cd", i:playersOnTeam[ZDW_TEAM_BLUE]; HUDMSG_PLAIN, 232, CR_YELLOW, 0.9, 0.275, 0);
+		
+		Delay(5);
+	}
+}
+
+script "ZDW5CP Force flags" OPEN
+{
+	while(1) {
+		if(!GetCVar("SV_NoTeamSwitch"))
+			ConsoleCommand("SV_NoTeamSwitch 1");
+			
+		Delay(50);
+	}
+}
+
+function int checkTeamBalance (int team) {
+	// Allow team setup. Don't check balance if one of the teams is empty
+	if( (playersOnTeam[team] < 1) || (playersOnTeam[!team] < 1) )
+		return 0;
+	
+	if(playersOnTeam[team] >= playersOnTeam[!team] + 2)
+		return 1;
+		
+	return 0;
+}
+
+str teamConsoleName[2] = { "Ruby", "Topaz" };
+str teamColorCode[2] = { "\cg", "\ch" };
+
+str tempTeamItem[2] = { "DRItem", "DBItem" };
+str tempTeamPowerup[4] = { "RedTeam", "BlueTeam", "RedStrife", "BlueStrife" };
+
+script "ZDW5CP Team Auto Balance Enter" ENTER
+{
+	// Let the player be assigned to their team first
+	Delay(2);
+	
+	int myTeam = playerOnTeam[PlayerNumber()];
+	
+	// Check if there is a major unbalance.
+	if(checkTeamBalance(myTeam)) {
+		int myNewTeam = !myTeam;
+		Player_SetTeam(myNewTeam);
+	
+		SetFont("BIGFONT");
+		HudMessage(s:"You have been switched to ",s:teamColorCode[!myTeam],s:teamConsoleName[!myTeam],s:"\nto maintain game balance.";HUDMSG_FADEOUT|HUDMSG_LOG,779,CR_GREEN,1.5,0.4,5.0,0.5,0.8);
+		
+		playerOnTeam[PlayerNumber()] = myNewTeam;
+		
+		playersOnTeam[myNewTeam]++;
+		playersOnTeam[myTeam]--;
+		
+		Thing_ChangeTID(0, 300 + (10 * myNewTeam));
+		
+		TakeInventory(tempTeamItem[myTeam],1);
+		GiveInventory(tempTeamItem[myNewTeam],1);
+		
+		if(PlayerClass(PlayerNumber()) == 3) {
+			TakeInventory(StrParam(s:tempTeamPowerup[2 + myTeam],s:"Power"),1);
+			GiveInventory(StrParam(s:tempTeamPowerup[2 + myNewTeam],s:"Powerup"),1);
+		} else {
+			TakeInventory(StrParam(s:tempTeamPowerup[myTeam],s:"Power"),1);
+			GiveInventory(StrParam(s:tempTeamPowerup[myNewTeam],s:"Powerup"),1);
+		}
+	}
+}

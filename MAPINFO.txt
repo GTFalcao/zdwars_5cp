@@ -1,0 +1,6 @@
+
+map ZDW5CP9 "Turmoil"
+next ZDW5CP1
+aircontrol 0.4
+music "ZDWARS13"
+sky1 stsky1 0.1

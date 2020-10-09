@@ -10,7 +10,7 @@
 #define	ZDW_WINNING_TEAM_RED		1
 #define	ZDW_WINNING_TEAM_BLUE		2
 
-#define ZDW_ENERGY_OVERHEAT			20
+#define ZDW_ENERGY_OVERHEAT			200
 
 global	int	1:	gameState5CP;
 global	int	2:	winningTeam5CP;
@@ -1406,7 +1406,7 @@ script "ZDW5CP Team Actions" ENTER
 		if (playerOnPoint[iAmHere] != 5) {
 			GiveInventory("ControlPointEnergy", 1);
 			if (CheckInventory("ControlPointEnergy") >= ZDW_ENERGY_OVERHEAT) {
-				Log(s:"Overheated!");
+				Log(s:"Overheated! You've been on the point for too long!");
 				GiveInventory("ControlPointEnergyOverheat", 1);
 				TakeInventory("ControlPointEnergy", 20);
 			}
@@ -1469,7 +1469,7 @@ script "ZDW5CP Team Actions Re" RESPAWN
 		if (playerOnPoint[iAmHere] != 5) {
 			GiveInventory("ControlPointEnergy", 1);
 			if (CheckInventory("ControlPointEnergy") >= ZDW_ENERGY_OVERHEAT) {
-				Log(s:"Overheated!");
+				Log(s:"Overheated! You've been on the point for too long!");
 				GiveInventory("ControlPointEnergyOverheat", 1);
 				TakeInventory("ControlPointEnergy", 20);
 			}

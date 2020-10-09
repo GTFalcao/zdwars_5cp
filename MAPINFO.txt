@@ -1,6 +1,23 @@
 
 map ZDW5CP9 "Turmoil"
-next ZDW5CP1
+next ZDW5CP10
 aircontrol 0.4
 music "ZDWARS13"
 sky1 stsky1 0.1
+
+map ZDW5CP10 "Tyketto's Den"
+music "ZDWARS26"
+next ZDW5CP11
+aircontrol 0.4
+
+map ZDW5CP11 "Fort Frenzy"
+aircontrol 0.4
+sky1 GRIMSKY 0.0
+music ZDWARS45
+next ZDW5CP12
+
+map ZDW5CP12 "Blazing Colosseum"
+aircontrol 0.4
+music "ZDWARS9"
+next ZDW5CP1
+sky1 stsky1 0.2

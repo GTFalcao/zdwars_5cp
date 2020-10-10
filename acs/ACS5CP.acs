@@ -106,6 +106,7 @@ int pointsOnTeam[3];
 	790: point cooldown timer
 	791-792: prepare to fight
 	792: match start timer
+	793: powerup spawn
 */
 
 function int debug (void) {
@@ -927,6 +928,49 @@ script 201 (int pointNum)
 	}
 }
 
+// Powerup spawning
+
+#define POWERUP_ID	220
+
+int powerupSpawned = false;
+
+str powerupActors[4] = {
+	"ZDWPowerupSpeed",
+	"ZDWPowerupRage",
+	"ZDWPowerupInvulnerability",
+	"ZDWPowerupResistance"/*,
+	"ZDWPowerupManaRegen",
+	"ZDWPowerupManaPickup"*/
+};
+str powerupNames[6] = {
+	"Speed Boost!",
+	"Summoning Rage!",
+	"Invulnerability!",
+	"Damage Resistance!"/*,
+	"Double Mana Regen!",
+	"Double Mana Pickups!"*/
+};
+
+script 202 (void) {
+	Delay(5 * random(180, 250));
+	
+	SpawnSpotForced(powerupActors[random(0, 3)], 0, POWERUP_ID, 0);
+	SetFont("BIGFONT");
+	HudMessageBold(s:"A Powerup has spawned!";HUDMSG_FADEINOUT|HUDMSG_LOG,793,CR_YELLOW,1.5,0.25,3.2,0.4,0.8);
+	powerupSpawned = true;
+	
+	while (powerupSpawned)
+		Delay(100);
+		
+	restart;
+}
+script 203 (int name) {
+	SetFont("BIGFONT");
+	HudMessageBold(n:0, s:"\ck got \cd", s:powerupNames[name];HUDMSG_FADEINOUT|HUDMSG_LOG,793,CR_WHITE,1.5,0.25,3.2,0.4,0.8);
+	AmbientSound("misc/p_pkup", 127);
+	powerupSpawned = false;
+}
+
 // Player joins and is frozen until the warm up timer is up.
 script "ZDW5CP Countdown" ENTER
 {
@@ -1101,6 +1145,8 @@ script "ZDW5CP Game Start" OPEN
 	refreshHUD(1);
 		
 	warmupDone = 1;
+	
+	ACS_ExecuteAlways(202, 0);
 	
 	SetCVar("ZDW_ManaRegenerationSpeed",0);
 	SetCVar("ZDW_HeroManaRegenerationSpeed",0);

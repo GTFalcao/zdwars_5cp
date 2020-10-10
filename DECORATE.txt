@@ -1,4 +1,6 @@
 
+// Capture point 'Energy'
+
 actor ControlPointEnergy : inventory { inventory.maxamount 200 }
 
 actor ControlPointEnergyOverheat : CustomInventory {
@@ -31,7 +33,7 @@ actor ControlPointEnergyOverheatMissile {
 	}
 }
 
-// Open Point Arrows
+// Open Point Markers
 
 actor ControlPoint0FloatMarker {
 	scale 1.5
@@ -79,6 +81,8 @@ actor ControlPoint4FloatMarker : ControlPoint0FloatMarker {
 	}
 }
 
+// Macho Man decoration
+
 actor ColosseumMachoMan 20021 {
 	+SOLID
 	height 69
@@ -88,3 +92,123 @@ actor ColosseumMachoMan 20021 {
 			stop
 	}
 }
+
+// Powerups
+
+actor ZDWPowerup : CustomInventory {
+	inventory.pickupsound "misc/p_pkup"
+	inventory.pickupmessage "Special Powerup obtained!"
+	+INVENTORY.AUTOACTIVATE
+	+INVENTORY.ALWAYSPICKUP
+}
+
+// 0 - Speed
+actor ZDWPowerupSpeed : ZDWPowerup {
+	states {
+		Spawn:
+			ZDP0 ABCDEFGH 3 bright
+			loop
+		Pickup:
+			TNT1 A 0 ACS_ExecuteAlways(203, 0, 0)
+			TNT1 A 0 A_GiveInventory("ZDWPowerupGiverSpeed", 1)
+			stop
+	}
+}
+actor ZDWPowerupGiverSpeed : PowerupGiver {
+	+INVENTORY.AUTOACTIVATE
+	+INVENTORY.ALWAYSPICKUP
+	powerup.duration -45
+	powerup.type "Speed"
+}
+
+// 1 - Rage
+actor ZDWPowerupRage : ZDWPowerup {
+	states {
+		Spawn:
+			ZDP1 ABCDEFGH 6
+			loop
+		Pickup:
+			TNT1 A 0 ACS_ExecuteAlways(203, 0, 1)
+			TNT1 A 0 A_GiveInventory("ZDWPowerupGiverRage", 1)
+			stop
+	}
+}
+actor ZDWPowerupGiverRage : PowerupGiver {
+	+INVENTORY.AUTOACTIVATE
+	+INVENTORY.ALWAYSPICKUP
+	powerup.color "60 00 00" 0.25
+	powerup.duration -45
+	powerup.type "DoubleFiringSpeed"
+}
+
+// 2 - Invulnerability
+actor ZDWPowerupInvulnerability : ZDWPowerup {
+	states {
+		Spawn:
+			ZDP2 ABCD 6 bright
+			loop
+		Pickup:
+			TNT1 A 0 ACS_ExecuteAlways(203, 0, 2)
+			TNT1 A 0 A_GiveInventory("ZDWPowerupGiverInvulnerability", 1)
+			stop
+	}
+}
+actor ZDWPowerupGiverInvulnerability : PowerupGiver {
+	+INVENTORY.AUTOACTIVATE
+	+INVENTORY.ALWAYSPICKUP
+	powerup.color "60 00 00" 0.25
+	powerup.duration -25
+	powerup.type "Invulnerable"
+}
+
+// 3 - Resistance
+actor ZDWPowerupResistance : ZDWPowerup {
+	states {
+		Spawn:
+			ZDP3 ABCD 6 Bright
+			loop
+		Pickup:
+			TNT1 A 0 ACS_ExecuteAlways(203, 0, 3)
+			TNT1 A 0 A_GiveInventory("ZDWPowerupGiverResistance", 1)
+			stop
+	}
+}
+actor ZDWPowerupGiverResistance : PowerupGiver {
+	+INVENTORY.AUTOACTIVATE
+	+INVENTORY.ALWAYSPICKUP
+	powerup.color GreenMap
+	powerup.duration -45
+	powerup.type "ZDWResistance"
+}
+actor PowerZDWResistance : PowerProtection
+{
+	damagefactor "normal", 0.35
+}
+
+// 4 - Mana Regen
+/*
+actor ZDWPowerupManaRegen : ZDWPowerup {
+	states {
+		Spawn:
+			ZDP4 A -1
+			loop
+		Pickup:
+			TNT1 A 0 ACS_ExecuteAlways(203, 0, 4)
+			stop
+	}
+}
+*/
+
+// 5 - Mana Pickup
+/*
+actor ZDWPowerupManaPickup : ZDWPowerup {
+	states {
+		Spawn:
+			ZDP5 A -1
+			loop
+		Pickup:
+			TNT1 A 0 ACS_ExecuteAlways(203, 0, 5)
+			stop
+	}
+}
+*/

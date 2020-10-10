@@ -1,8 +1,0 @@
-powerups (time-based, spawn on a random spot every few minutes):
-- +50% player speed;
-- double summoner speed;
-- double mana regen rate;
-- double mana from pickups;
-- double point capture speed;
-- invulnerability;
-- damage reduction;

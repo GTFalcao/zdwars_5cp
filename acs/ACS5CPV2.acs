@@ -849,6 +849,8 @@ str powerupNames[4] = {
 };
 
 script 202 (void) {
+	if(ThingCount(0, powerupMapspotMinID) == 0) terminate;
+	
 	for (int i = powerupMapspotMinID; i <= powerupMapspotMaxID; i++) {
 		if(ThingCount(0, i) <= 0) {
 			powerupMapspotMaxID = i;
@@ -870,7 +872,7 @@ script 202 (void) {
 }
 script 203 (int name) {
 	SetFont("BIGFONT");
-	HudMessageBold(n:0, s:"\ck got \cd", s:powerupNames[name];HUDMSG_FADEINOUT|HUDMSG_LOG,793,CR_WHITE,1.5,0.25,3.2,0.4,0.8);
+	HudMessageBold(n:0, s:"\cd got ", s:powerupNames[name];HUDMSG_FADEINOUT|HUDMSG_LOG,793,CR_WHITE,1.5,0.25,3.2,0.4,0.8);
 	AmbientSound("misc/p_pkup", 127);
 	powerupSpawned = false;
 }

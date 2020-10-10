@@ -34,7 +34,8 @@ actor ControlPointEnergyOverheatMissile {
 // Open Point Arrows
 
 actor ControlPoint0FloatMarker {
-	scale 0.5
+	scale 1.5
+	height 64
 	gravity 0
 	+NOBLOCKMAP
 	+NOCLIP

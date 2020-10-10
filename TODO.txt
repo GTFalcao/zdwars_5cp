@@ -1,5 +1,8 @@
-tyketto's: check 1px holes on ceiling near lava
-
-colosseum: check stairs size at the base, monsters can't walk up
-
-fort frenzy: check gates, check blocking linedefs
+powerups (time-based, spawn on a random spot every few minutes):
+- +50% player speed;
+- double summoner speed;
+- double mana regen rate;
+- double mana from pickups;
+- double point capture speed;
+- invulnerability;
+- damage reduction;

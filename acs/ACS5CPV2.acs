@@ -76,7 +76,6 @@ int pointToOpen[2] = {5, 5};
 */
 // Point-related stuff
 str pointParticleName[3] = { "WhiteParticleFountain", "RedParticleFountain", "BlueParticleFountain" };
-str pointArrowName[3] = { "WhitePointArrow", "RedPointArrow", "BluePointArrow" };
 str pointFloortexName[2] = { "DEM3_6", "DEM4_6" };
 str pointMidtexName[3] = { "CP5GR2N", "CP5GR2R", "CP5GR2B" };
 
@@ -371,7 +370,7 @@ function void capturePoint (int point, int team) {
 	
 	Thing_Remove(210+point);
 	SpawnSpotForced(StrParam(s:"ControlPoint",i:point,s:"MapMarkerOpen"),215+point,210+point,0);
-	SpawnSpotForced(pointArrowName[1+team],215+point,210+point,0);
+	SpawnSpotForced(StrParam(s:"ControlPoint",i:point,s:"FloatMarker"),215+point,210+point,0);
 	
 	setPointTextures(200+point,pointMidtexName[1+team]);
 	
@@ -1056,7 +1055,7 @@ script "ZDW5CP Game Start" OPEN
 		SpawnSpotForced(pointParticleName[0],200+i,205+i,0);
 		Thing_Remove(210+i);
 		SpawnSpotForced(StrParam(s:"ControlPoint",i:i,s:"MapMarkerOpen"),215+i,210+i,0);
-		SpawnSpotForced(pointArrowName[0],215+i,210+i,0);
+		SpawnSpotForced(StrParam(s:"ControlPoint",i:i,s:"FloatMarkerOpen"),215+i,210+i,0);
 	}
 	
 	refreshHUD(1);

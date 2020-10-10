@@ -33,35 +33,47 @@ actor ControlPointEnergyOverheatMissile {
 
 // Open Point Arrows
 
-actor WhitePointArrow {
-	scale 3.0
+actor ControlPoint0FloatMarker {
+	scale 0.5
 	gravity 0
 	+NOBLOCKMAP
 	+NOCLIP
 	states {
 		Spawn:
-			PARW A 1
-			PARW "#" 45 bright ThrustThingZ(0, 90, 0, 0)
-			PARW "#" 5 bright A_Stop
-			PARW "#" 15 bright A_SetGravity(0.5)
-			PARW "#" 5 bright A_SetGravity(0)
-			PARW "#" -1 bright A_ChangeFlag("FLOATBOB", true)
+			P5CP A 1
+			P5CP "#" 45 bright ThrustThingZ(0, 90, 0, 0)
+			P5CP "#" 5 bright A_Stop
+			P5CP "#" 15 bright A_SetGravity(0.5)
+			P5CP "#" 5 bright A_SetGravity(0)
+			P5CP "#" -1 bright A_ChangeFlag("FLOATBOB", true)
 			stop
 	}
 }
-
-actor RedPointArrow : WhitePointArrow {
+actor ControlPoint1FloatMarker : ControlPoint0FloatMarker {
 	states {
 		Spawn:
-			PARW B 1
+			P5CP B 1
 			goto Super::Spawn+1
 	}
 }
-
-actor BluePointArrow : WhitePointArrow {
+actor ControlPoint2FloatMarker : ControlPoint0FloatMarker {
 	states {
 		Spawn:
-			PARW C 1
+			P5CP C 1
+			goto Super::Spawn+1
+	}
+}
+actor ControlPoint3FloatMarker : ControlPoint0FloatMarker {
+	states {
+		Spawn:
+			P5CP D 1
+			goto Super::Spawn+1
+	}
+}
+actor ControlPoint4FloatMarker : ControlPoint0FloatMarker {
+	states {
+		Spawn:
+			P5CP E 1
 			goto Super::Spawn+1
 	}
 }

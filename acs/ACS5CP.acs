@@ -76,7 +76,6 @@ int pointToOpen[2] = {5, 5};
 
 // Point-related stuff
 str pointParticleName[3] = { "WhiteParticleFountain", "RedParticleFountain", "BlueParticleFountain" };
-str pointArrowName[3] = { "WhitePointArrow", "RedPointArrow", "BluePointArrow" };
 str pointFloortexName[2] = { "DEM3_6", "DEM4_6" };
 str pointMidtexName[3] = { "CP5GR2N", "CP5GR2R", "CP5GR2B" };
 
@@ -545,9 +544,9 @@ function void reopenPoints (void) {
 	Thing_Remove(210+pointToOpen[1]);
 	
 	SpawnSpotForced(StrParam(s:"ControlPoint",i:pointToOpen[0],s:"MapMarkerOpen"),215+pointToOpen[0],210+pointToOpen[0],0);
-	SpawnSpotForced(pointArrowName[1+pointOwner[pointToOpen[0]]],215+pointToOpen[0],210+pointToOpen[0],0);
+	SpawnSpotForced(StrParam(s:"ControlPoint",i:pointToOpen[0],s:"FloatMarker"),215+pointToOpen[0],210+pointToOpen[0],0);
 	SpawnSpotForced(StrParam(s:"ControlPoint",i:pointToOpen[1],s:"MapMarkerOpen"),215+pointToOpen[1],210+pointToOpen[1],0);
-	SpawnSpotForced(pointArrowName[1+pointOwner[pointToOpen[1]]],215+pointToOpen[1],210+pointToOpen[1],0);
+	SpawnSpotForced(StrParam(s:"ControlPoint",i:pointToOpen[1],s:"FloatMarker"),215+pointToOpen[1],210+pointToOpen[1],0);
 	
 	pointToOpen[0] = 5;
 	pointToOpen[1] = 5;
@@ -1161,7 +1160,7 @@ script "ZDW5CP Game Start" OPEN
 	
 	Thing_Remove(212);
 	SpawnSpotForced("ControlPoint2MapMarkerOpen",217,212,0);
-	SpawnSpotForced(pointArrowName[0],217,212,0);
+	SpawnSpotForced("ControlPoint2FloatMarker",217,212,0);
 	
 	refreshHUD(1);
 	

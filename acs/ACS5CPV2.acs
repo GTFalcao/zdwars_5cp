@@ -827,9 +827,9 @@ script 201 (int pointNum)
 
 // Powerup spawning
 
-#define POWERUP_ID	220
-
 int powerupSpawned = false;
+int powerupMapspotMinID = 221;
+int powerupMapspotMaxID = 230;
 
 str powerupActors[4] = {
 	"ZDWPowerupSpeed",
@@ -839,7 +839,7 @@ str powerupActors[4] = {
 	"ZDWPowerupManaRegen",
 	"ZDWPowerupManaPickup"*/
 };
-str powerupNames[6] = {
+str powerupNames[4] = {
 	"Speed Boost!",
 	"Summoning Rage!",
 	"Invulnerability!",
@@ -849,9 +849,16 @@ str powerupNames[6] = {
 };
 
 script 202 (void) {
+	for (int i = powerupMapspotMinID; i <= powerupMapspotMaxID; i++) {
+		if(ThingCount(0, i) <= 0) {
+			powerupMapspotMaxID = i;
+			break;
+		}
+	}
+	
 	Delay(5 * random(180, 250));
 	
-	SpawnSpotForced(powerupActors[random(0, 3)], 0, POWERUP_ID, 0);
+	SpawnSpotForced(powerupActors[random(0, 3)], random(powerupMapspotMinID, powerupMapspotMaxID), 0, 0);
 	SetFont("BIGFONT");
 	HudMessageBold(s:"A Powerup has spawned!";HUDMSG_FADEINOUT|HUDMSG_LOG,793,CR_YELLOW,1.5,0.25,3.2,0.4,0.8);
 	powerupSpawned = true;

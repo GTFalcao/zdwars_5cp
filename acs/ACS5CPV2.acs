@@ -853,14 +853,16 @@ script 202 (void) {
 	
 	for (int i = powerupMapspotMinID; i <= powerupMapspotMaxID; i++) {
 		if(ThingCount(0, i) <= 0) {
-			powerupMapspotMaxID = i;
+			powerupMapspotMaxID = i - 1;
 			break;
 		}
 	}
 	
-	Delay(5 * random(180, 250));
+	Delay(35 * random(180, 250));
 	
-	SpawnSpotForced(powerupActors[random(0, 3)], random(powerupMapspotMinID, powerupMapspotMaxID), 0, 0);
+	int name = random(0, 3);
+	
+	SpawnSpotForced(powerupActors[name], random(powerupMapspotMinID, powerupMapspotMaxID), 0, 0);
 	SetFont("BIGFONT");
 	HudMessageBold(s:"A Powerup has spawned!";HUDMSG_FADEINOUT|HUDMSG_LOG,793,CR_YELLOW,1.5,0.25,3.2,0.4,0.8);
 	powerupSpawned = true;

@@ -122,7 +122,7 @@ actor ZDWPowerupSpark
 actor ZDWPowerupSpeed : ZDWPowerup {
 	states {
 		Spawn:
-			ZDP0 ABCDEFGH 3 bright A_SpawnItemEx("ZDWPowerupSpark", random(-20, 20), random(-20, 20), random(10, 20), 0, 0, frandom(1.0, 4.0), 0, SXF_CLIENTSIDE)
+			ZDP0 ABCDEFGH 3 bright A_SpawnItemEx("ZDWPowerupSpark", random(-24, 24), random(-24, 24), random(8, 24), 0, 0, frandom(1.0, 5.0), 0, SXF_CLIENTSIDE)
 			loop
 		Pickup:
 			TNT1 A 0 ACS_ExecuteAlways(203, 0, 0)
@@ -142,7 +142,7 @@ actor ZDWPowerupGiverSpeed : PowerupGiver {
 actor ZDWPowerupRage : ZDWPowerup {
 	states {
 		Spawn:
-			ZDP1 AABBCCDDEEFFGGHH 3 bright A_SpawnItemEx("ZDWPowerupSpark", random(-20, 20), random(-20, 20), random(10, 20), 0, 0, frandom(1.0, 4.0), 0, SXF_CLIENTSIDE)
+			ZDP1 AABBCCDDEEFFGGHH 3 bright A_SpawnItemEx("ZDWPowerupSpark", random(-24, 24), random(-24, 24), random(8, 24), 0, 0, frandom(1.0, 5.0), 0, SXF_CLIENTSIDE)
 			loop
 		Pickup:
 			TNT1 A 0 ACS_ExecuteAlways(203, 0, 1)
@@ -154,7 +154,7 @@ actor ZDWPowerupGiverRage : PowerupGiver {
 	+INVENTORY.AUTOACTIVATE
 	+INVENTORY.ALWAYSPICKUP
 	powerup.color "A0 00 00" 0.25
-	powerup.duration -45
+	powerup.duration -30
 	powerup.type "DoubleFiringSpeed"
 }
 
@@ -162,7 +162,7 @@ actor ZDWPowerupGiverRage : PowerupGiver {
 actor ZDWPowerupInvulnerability : ZDWPowerup {
 	states {
 		Spawn:
-			ZDP2 AABBCCDD 3 bright A_SpawnItemEx("ZDWPowerupSpark", random(-20, 20), random(-20, 20), random(10, 20), 0, 0, frandom(1.0, 4.0), 0, SXF_CLIENTSIDE)
+			ZDP2 AABBCCDD 3 bright A_SpawnItemEx("ZDWPowerupSpark", random(-24, 24), random(-24, 24), random(8, 24), 0, 0, frandom(1.0, 5.0), 0, SXF_CLIENTSIDE)
 			loop
 		Pickup:
 			TNT1 A 0 ACS_ExecuteAlways(203, 0, 2)
@@ -182,7 +182,7 @@ actor ZDWPowerupGiverInvulnerability : PowerupGiver {
 actor ZDWPowerupResistance : ZDWPowerup {
 	states {
 		Spawn:
-			ZDP3 AABBCCDD 3 bright A_SpawnItemEx("ZDWPowerupSpark", random(-20, 20), random(-20, 20), random(10, 20), 0, 0, frandom(1.0, 4.0), 0, SXF_CLIENTSIDE)
+			ZDP3 AABBCCDD 3 bright A_SpawnItemEx("ZDWPowerupSpark", random(-24, 24), random(-24, 24), random(8, 24), 0, 0, frandom(1.0, 5.0), 0, SXF_CLIENTSIDE)
 			loop
 		Pickup:
 			TNT1 A 0 ACS_ExecuteAlways(203, 0, 3)
@@ -201,8 +201,6 @@ actor PowerZDWResistance : PowerProtection
 {
 	damagefactor "normal", 0.35
 }
-actor testrocket : rocket { damagetype "suppression" }
-actor testrocket2 : rocket { damagetype "normal" }
 
 // 4 - Mana Regen
 /*

@@ -967,7 +967,7 @@ script 202 (void) {
 	
 	SpawnSpotForced(powerupActors[name], random(powerupMapspotMinID, powerupMapspotMaxID), 0, 0);
 	SetFont("BIGFONT");
-	HudMessageBold(s:"A Powerup has spawned!";HUDMSG_FADEINOUT|HUDMSG_LOG,793,CR_YELLOW,1.5,0.25,3.2,0.4,0.8);
+	HudMessageBold(s:"A Powerup has spawned!";HUDMSG_FADEINOUT|HUDMSG_LOG,793,CR_YELLOW,1.5,0.265,3.2,0.4,0.8);
 	powerupSpawned = true;
 	
 	while (powerupSpawned)
@@ -977,7 +977,7 @@ script 202 (void) {
 }
 script 203 (int name) {
 	SetFont("BIGFONT");
-	HudMessageBold(n:0, s:"\cd got ", s:powerupNames[name];HUDMSG_FADEINOUT|HUDMSG_LOG,793,CR_WHITE,1.5,0.25,3.2,0.4,0.8);
+	HudMessageBold(n:0, s:"\ck got ", s:powerupNames[name];HUDMSG_FADEINOUT|HUDMSG_LOG,793,CR_WHITE,1.5,0.265,3.2,0.4,0.8);
 	AmbientSound("misc/p_pkup", 127);
 	powerupSpawned = false;
 }

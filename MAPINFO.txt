@@ -1,4 +1,10 @@
 
+map ZDW5CP7 "Pacific Warfare"
+sky1 CLOUDBOX 0.0
+aircontrol 0.4
+music "ZDWARS20"
+next ZDW5CP8
+
 map ZDW5CP9 "Turmoil"
 next ZDW5CP10
 aircontrol 0.4

@@ -952,7 +952,7 @@ str powerupNames[4] = {
 };
 
 script 202 (void) {
-	if(ThingCount(0, powerupMapspotMinID) == 0) terminate;
+	if( (ThingCount(0, powerupMapspotMinID) == 0) || (GetCVar("ZDW_5CP_DisablePowerups")) ) terminate;
 	
 	for (int i = powerupMapspotMinID; i <= powerupMapspotMaxID; i++) {
 		if(ThingCount(0, i) <= 0) {
@@ -961,7 +961,13 @@ script 202 (void) {
 		}
 	}
 	
-	Delay(35 * random(180, 250));
+	int minS = GetCVar("ZDW_5CP_PowerupMinSeconds");
+	int maxS = GetCVar("ZDW_5CP_PowerupMaxSeconds");
+	
+	if (minS > maxS || minS > 10) minS = 10;
+	if (maxS < 20) maxS = 20;
+	
+	Delay(35 * random(minS, maxS));
 	
 	int name = random(0, 3);
 	

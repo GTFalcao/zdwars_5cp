@@ -106,7 +106,7 @@ int pointsOnTeam[3];
 	790: point cooldown timer
 	791-792: prepare to fight
 	792: match start timer
-	793: powerup spawn
+	793-794: powerup spawn
 */
 
 function int debug (void) {
@@ -634,9 +634,9 @@ script 201 (int pointNum)
 							SetFont("BIGFONT");
 		
 							if( (captureCooldownTimer % 60) < 10)
-								HudMessageBold(s:"COOLDOWN: \ci",i:(captureCooldownTimer / 60),s:":0",i:(captureCooldownTimer % 60);HUDMSG_FADEOUT,790,CR_GREEN,1.5,0.22,1.5,0.5);
+								HudMessageBold(s:"COOLDOWN: \ci",i:(captureCooldownTimer / 60),s:":0",i:(captureCooldownTimer % 60);HUDMSG_FADEOUT,790,CR_GREEN,1.5,0.325,1.5,0.5);
 							else
-								HudMessageBold(s:"COOLDOWN: \ci",i:(captureCooldownTimer / 60),s:":",i:(captureCooldownTimer % 60);HUDMSG_FADEOUT,790,CR_GREEN,1.5,0.22,1.5,0.5);
+								HudMessageBold(s:"COOLDOWN: \ci",i:(captureCooldownTimer / 60),s:":",i:(captureCooldownTimer % 60);HUDMSG_FADEOUT,790,CR_GREEN,1.5,0.325,1.5,0.5);
 		
 							captureCooldownTimer--;
 	
@@ -682,9 +682,9 @@ script 201 (int pointNum)
 							SetFont("BIGFONT");
 		
 							if( (captureCooldownTimer % 60) < 10)
-								HudMessageBold(s:"COOLDOWN: \ci",i:(captureCooldownTimer / 60),s:":0",i:(captureCooldownTimer % 60);HUDMSG_FADEOUT,790,CR_GREEN,1.5,0.22,1.5,0.5);
+								HudMessageBold(s:"COOLDOWN: \ci",i:(captureCooldownTimer / 60),s:":0",i:(captureCooldownTimer % 60);HUDMSG_FADEOUT,790,CR_GREEN,1.5,0.325,1.5,0.5);
 							else
-								HudMessageBold(s:"COOLDOWN: \ci",i:(captureCooldownTimer / 60),s:":",i:(captureCooldownTimer % 60);HUDMSG_FADEOUT,790,CR_GREEN,1.5,0.22,1.5,0.5);
+								HudMessageBold(s:"COOLDOWN: \ci",i:(captureCooldownTimer / 60),s:":",i:(captureCooldownTimer % 60);HUDMSG_FADEOUT,790,CR_GREEN,1.5,0.325,1.5,0.5);
 		
 							captureCooldownTimer--;
 	
@@ -781,9 +781,9 @@ script 201 (int pointNum)
 						SetFont("BIGFONT");
 	
 						if( (captureCooldownTimer % 60) < 10)
-							HudMessageBold(s:"COOLDOWN: \ci",i:(captureCooldownTimer / 60),s:":0",i:(captureCooldownTimer % 60);HUDMSG_FADEOUT,790,CR_GREEN,1.5,0.22,1.5,0.5);
+							HudMessageBold(s:"COOLDOWN: \ci",i:(captureCooldownTimer / 60),s:":0",i:(captureCooldownTimer % 60);HUDMSG_FADEOUT,790,CR_GREEN,1.5,0.325,1.5,0.5);
 						else
-							HudMessageBold(s:"COOLDOWN: \ci",i:(captureCooldownTimer / 60),s:":",i:(captureCooldownTimer % 60);HUDMSG_FADEOUT,790,CR_GREEN,1.5,0.22,1.5,0.5);
+							HudMessageBold(s:"COOLDOWN: \ci",i:(captureCooldownTimer / 60),s:":",i:(captureCooldownTimer % 60);HUDMSG_FADEOUT,790,CR_GREEN,1.5,0.325,1.5,0.5);
 	
 						captureCooldownTimer--;
 
@@ -877,9 +877,9 @@ script 201 (int pointNum)
 						SetFont("BIGFONT");
 	
 						if( (captureCooldownTimer % 60) < 10)
-							HudMessageBold(s:"COOLDOWN: \ci",i:(captureCooldownTimer / 60),s:":0",i:(captureCooldownTimer % 60);HUDMSG_FADEOUT,790,CR_GREEN,1.5,0.22,1.5,0.5);
+							HudMessageBold(s:"COOLDOWN: \ci",i:(captureCooldownTimer / 60),s:":0",i:(captureCooldownTimer % 60);HUDMSG_FADEOUT,790,CR_GREEN,1.5,0.325,1.5,0.5);
 						else
-							HudMessageBold(s:"COOLDOWN: \ci",i:(captureCooldownTimer / 60),s:":",i:(captureCooldownTimer % 60);HUDMSG_FADEOUT,790,CR_GREEN,1.5,0.22,1.5,0.5);
+							HudMessageBold(s:"COOLDOWN: \ci",i:(captureCooldownTimer / 60),s:":",i:(captureCooldownTimer % 60);HUDMSG_FADEOUT,790,CR_GREEN,1.5,0.325,1.5,0.5);
 	
 						captureCooldownTimer--;
 
@@ -931,60 +931,132 @@ script 201 (int pointNum)
 // Powerup spawning
 
 int powerupSpawned = false;
-int powerupMapspotMinID = 221;
-int powerupMapspotMaxID = 230;
 
-str powerupActors[4] = {
-	"ZDWPowerupSpeed",
-	"ZDWPowerupRage",
-	"ZDWPowerupInvulnerability",
-	"ZDWPowerupResistance"/*,
-	"ZDWPowerupManaRegen",
-	"ZDWPowerupManaPickup"*/
-};
-str powerupNames[4] = {
-	"Speed Boost!",
-	"Summoning Rage!",
-	"Invulnerability!",
-	"Damage Resistance!"/*,
-	"Double Mana Regen!",
-	"Double Mana Pickups!"*/
+str powerupData[6][3] = {
+	{
+		"ZDWPowerupSpeed",
+		"Speed Boost!",
+		"ZDP0B0"
+	},
+	{
+		"ZDWPowerupRage",
+		"Summoning Rage!",
+		"ZDP1A0"
+	},
+	{
+		"ZDWPowerupInvulnerability",
+		"Invulnerability!",
+		"ZDP2A0"
+	},
+	{
+		"ZDWPowerupResistance",
+		"Damage Resistance!",
+		"ZDP3A0"
+	},
+	{
+		"ZDWPowerupManaRegen",
+		"Double Mana Regen!",
+		"ZPM4A0"
+	},
+	{
+		"ZDWPowerupManaPickup",
+		"Double Mana Pickups!",
+		"ZDP5A0"
+	}
 };
 
 script 202 (void) {
-	if( (ThingCount(0, powerupMapspotMinID) == 0) || (GetCVar("ZDW_5CP_DisablePowerups")) ) terminate;
+	if(GetCVar("ZDW_5CP_DisablePowerups"))
+		terminate;
 	
-	for (int i = powerupMapspotMinID; i <= powerupMapspotMaxID; i++) {
-		if(ThingCount(0, i) <= 0) {
-			powerupMapspotMaxID = i - 1;
+	// Respawn and Despawn times: set by CVar with random +/- up to 10%
+	
+	int respawnTime = GetCVar("ZDW_5CP_PowerupRespawnTime");
+	int despawnTime = GetCVar("ZDW_5CP_PowerupDespawnTime");
+	
+	if (respawnTime < 20) respawnTime = 20;
+	else if (respawnTime > 300) respawnTime = 300;
+	
+	if (despawnTime < 20) despawnTime = 20;
+	else if (despawnTime > 300) despawnTime = 300;
+	
+	int respawnTimeRange = respawnTime / 10;
+	int despawnTimeRange = despawnTime / 10;
+	
+	int actualRespawnTime = random(respawnTime - respawnTimeRange, respawnTime + respawnTimeRange);
+	int actualDespawnTime = random(despawnTime - despawnTimeRange, despawnTime + despawnTimeRange);
+	
+	if (powerupSpawned) actualRespawnTime /= 2;
+	
+	Delay(35 * actualRespawnTime);
+	
+	// Choose powerup
+	int name = random(0, 5);
+	
+	// Choose point
+	int point = random(0, 4);
+	
+	// Choose spawn spot
+	
+	int powerupMapspotMinID = 1201 + (point * 10);
+	int powerupMapspotMaxID = 1201 + (point * 10);
+	
+	if (ThingCount(0, powerupMapspotMinID) == 0)
+		terminate;
+	
+	for (int k = powerupMapspotMinID; k <= (1210+(point*10)); k++) {
+		if(ThingCount(0, k) <= 0) {
+			powerupMapspotMaxID = k - 1;
 			break;
 		}
 	}
+
+	int mapspotID = random(powerupMapspotMinID, powerupMapspotMaxID);
+		
+	SpawnSpotForced(powerupData[name][0], mapspotID, 1200, 0);
+	SpawnSpotForced(StrParam(s:powerupData[name][0],s:"MapMarker"), mapspotID, 1200, 0);
 	
-	int minS = GetCVar("ZDW_5CP_PowerupMinSeconds");
-	int maxS = GetCVar("ZDW_5CP_PowerupMaxSeconds");
-	
-	if (minS > maxS || minS > 10) minS = 10;
-	if (maxS < 20) maxS = 20;
-	
-	Delay(35 * random(minS, maxS));
-	
-	int name = random(0, 3);
-	
-	SpawnSpotForced(powerupActors[name], random(powerupMapspotMinID, powerupMapspotMaxID), 0, 0);
+	SetFont(powerupData[name][2]);
+	HudMessageBold(s:"A";HUDMSG_FADEINOUT,793,CR_YELLOW,1.365+(0.075 * point),0.2905,600.0,0.4,0.8);
 	SetFont("BIGFONT");
-	HudMessageBold(s:"A Powerup has spawned!";HUDMSG_FADEINOUT|HUDMSG_LOG,793,CR_YELLOW,1.5,0.265,3.2,0.4,0.8);
+	HudMessageBold(s:"A Powerup has spawned!";HUDMSG_FADEINOUT|HUDMSG_LOG,794,CR_YELLOW,1.5,0.2925,3.2,0.4,0.8);
+	AmbientSound("zdw/powerup/spawn", 127);
 	powerupSpawned = true;
 	
-	while (powerupSpawned)
-		Delay(100);
+	for (int j = actualDespawnTime; j > 0; j--) {
+		if (!powerupSpawned)
+			break;
+		else if (j <= 4) {
+			SetFont(powerupData[name][2]);
+			HudMessageBold(s:"A";HUDMSG_PLAIN|HUDMSG_ALPHA,793,CR_YELLOW,1.365+(0.075 * point),0.2905,0,0.4);
+			Delay(10);
+			SetFont(powerupData[name][2]);
+			HudMessageBold(s:"A";HUDMSG_PLAIN,793,CR_YELLOW,1.365+(0.075 * point),0.2905,0);
+			Delay(10);
+			SetFont(powerupData[name][2]);
+			HudMessageBold(s:"A";HUDMSG_PLAIN|HUDMSG_ALPHA,793,CR_YELLOW,1.365+(0.075 * point),0.2905,0,0.4);
+			Delay(10);
+			SetFont(powerupData[name][2]);
+			HudMessageBold(s:"A";HUDMSG_PLAIN,793,CR_YELLOW,1.365+(0.075 * point),0.2905,0);
+			Delay(10);
+		}
+		else
+			Delay(35);
+	}
+	
+	if (powerupSpawned) {
+		SetActorState(1200, "FadeOut");
+	}
 		
+	SetFont(powerupData[name][2]);
+	HudMessageBold(s:"A";HUDMSG_FADEOUT,793,CR_YELLOW,1.365+(0.075 * point),0.2905,0.05,0.5);
 	restart;
 }
 script 203 (int name) {
 	SetFont("BIGFONT");
-	HudMessageBold(n:0, s:"\ck got ", s:powerupNames[name];HUDMSG_FADEINOUT|HUDMSG_LOG,793,CR_WHITE,1.5,0.265,3.2,0.4,0.8);
-	AmbientSound("misc/p_pkup", 127);
+	HudMessageBold(n:0, s:"\ck got ", s:powerupData[name][1];HUDMSG_FADEINOUT|HUDMSG_LOG,794,CR_WHITE,1.5,0.2925,3.2,0.4,0.8);
+	AmbientSound("zdw/powerup/pickup", 127);
+	Thing_Remove(1200);
 	powerupSpawned = false;
 }
 
@@ -1154,7 +1226,7 @@ script "ZDW5CP Game Start" OPEN
 	// Timer is up. Begin the round
 	
 	SetFont("BIGFONT");
-	HudMessageBold(s:"FIGHT!";HUDMSG_FADEOUT,791,CR_RED,1.5,0.35,2.0,3.0);
+	HudMessageBold(s:"FIGHT!";HUDMSG_FADEOUT,791,CR_RED,1.5,0.36,2.0,3.0);
 	HudMessageBold(s:"";HUDMSG_PLAIN,792,CR_RED,1.5,0.3,0.1);
 	
 	AmbientSound("announcer/5cp/fight",255);
@@ -1173,9 +1245,9 @@ script "ZDW5CP Game Start" OPEN
 		SetFont("BIGFONT");
 		
 		if( (startMatchTimer % 60) < 10)
-			HudMessageBold(s:"POINT OPENS IN: \ci",i:(startMatchTimer / 60),s:":0",i:(startMatchTimer % 60);HUDMSG_FADEOUT,792,CR_GREEN,1.5,0.22,1.5,0.5);
+			HudMessageBold(s:"POINT OPENS IN: \ci",i:(startMatchTimer / 60),s:":0",i:(startMatchTimer % 60);HUDMSG_FADEOUT,792,CR_GREEN,1.5,0.325,1.5,0.5);
 		else
-			HudMessageBold(s:"POINT OPENS IN: \ci",i:(startMatchTimer / 60),s:":",i:(startMatchTimer % 60);HUDMSG_FADEOUT,792,CR_GREEN,1.5,0.22,1.5,0.5);
+			HudMessageBold(s:"POINT OPENS IN: \ci",i:(startMatchTimer / 60),s:":",i:(startMatchTimer % 60);HUDMSG_FADEOUT,792,CR_GREEN,1.5,0.325,1.5,0.5);
 			
 		switch(startMatchTimer) {
 			case 60:
@@ -1267,7 +1339,10 @@ script "Team Mana Balance" ENTER
 		
 		manaRegenRunning[iAmHere] = 1;
 		
-		Delay(manaDelay);
+		if (CheckInventory("PowerZDWManaRegen"))
+			Delay(manaDelay / 2);
+		else
+			Delay(manaDelay);
 		
 		GiveInventory("Mana",1);
 		
@@ -1313,7 +1388,10 @@ script "Team Mana Balance Re" RESPAWN
 		
 		manaRegenRunning[iAmHere] = 1;
 		
-		Delay(manaDelay);
+		if (CheckInventory("PowerZDWManaRegen"))
+			Delay(manaDelay / 2);
+		else
+			Delay(manaDelay);
 		
 		GiveInventory("Mana",1);
 		
@@ -1361,7 +1439,10 @@ script "Team Hero Mana Balance" ENTER
 		
 		heroManaRegenRunning[iAmHere] = 1;
 		
-		Delay(heroManaDelay);
+		if (CheckInventory("PowerZDWManaRegen"))
+			Delay(heroManaDelay / 2);
+		else
+			Delay(heroManaDelay);
 		
 		GiveInventory("HeroMana",1);
 		
@@ -1404,7 +1485,10 @@ script "Team Hero Mana Balance Re" RESPAWN
 		
 		heroManaRegenRunning[iAmHere] = 1;
 		
-		Delay(heroManaDelay);
+		if (CheckInventory("PowerZDWManaRegen"))
+			Delay(heroManaDelay / 2);
+		else
+			Delay(heroManaDelay);
 		
 		GiveInventory("HeroMana",1);
 		

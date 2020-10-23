@@ -1,3 +1,3 @@
 server	noarchive	bool	ZDW_5CP_DisablePowerups			=	false;
-server	noarchive	int		ZDW_5CP_PowerupMinSeconds		=	180;
-server	noarchive	int		ZDW_5CP_PowerupMaxSeconds		=	250;
+server	noarchive	int		ZDW_5CP_PowerupRespawnTime		=	200;
+server	noarchive	int		ZDW_5CP_PowerupDespawnTime		=	100;

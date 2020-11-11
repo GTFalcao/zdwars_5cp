@@ -89,7 +89,7 @@ int teamAction[2][64];
 #define	TA_ANNOUNCER_CAPTURED_POINT			2
 #define TA_ANNOUNCER_LOST_POINT				3
 #define TA_ANNOUNCER_UNDER_ATTACK			4
-//#define TA_ANNOUNCER_LAST_POINT			5
+#define TA_ANNOUNCER_LAST_POINT				5
 //#define TA_ANNOUNCER_WELL_PLAYED			6
 
 int announcer_wellplayed;
@@ -393,7 +393,7 @@ function void capturePoint (int point, int team) {
 		
 	} else {
 		setTeamAction(TA_ANNOUNCER_CAPTURED_POINT, team);
-		setTeamAction(TA_ANNOUNCER_LOST_POINT, team);
+		setTeamAction(TA_ANNOUNCER_LOST_POINT, !team);
 	}
 	/*
 	switch(point) {
@@ -671,11 +671,11 @@ script 201 (int pointNum)
 	else if(!pointOwner[pointNum])
 	{
 		// Announcer warns Red team
-		/*
-		if(!pointNum)
+		
+		if((pointsOnTeam[1] == 1) && (pointsOnTeam[2] == 4))
 			setTeamAction(TA_ANNOUNCER_LAST_POINT,0);
 			
-		else */
+		else
 			setTeamAction(TA_ANNOUNCER_UNDER_ATTACK,0);
 		
 		// this loop is kept in place by its child loops
@@ -750,11 +750,11 @@ script 201 (int pointNum)
 	else if(pointOwner[pointNum])
 	{
 		// Announcer warns Blue team
-		/*
-		if(pointNum == 4)
+		
+		if((pointsOnTeam[2] == 1) && (pointsOnTeam[1] == 4))
 			setTeamAction(TA_ANNOUNCER_LAST_POINT,1);
 			
-		else */
+		else
 			setTeamAction(TA_ANNOUNCER_UNDER_ATTACK,1);
 		
 		// this loop is kept in place by its child loops
@@ -834,22 +834,22 @@ str powerupData[6][3] = {
 	{
 		"ZDWPowerupSpeed",
 		"Speed Boost!",
-		"ZPM0B0"
+		"ZDP0B0"
 	},
 	{
 		"ZDWPowerupRage",
 		"Summoning Rage!",
-		"ZPM1A0"
+		"ZDP1A0"
 	},
 	{
 		"ZDWPowerupInvulnerability",
 		"Invulnerability!",
-		"ZPM2A0"
+		"ZDP2A0"
 	},
 	{
 		"ZDWPowerupResistance",
 		"Damage Resistance!",
-		"ZPM3A0"
+		"ZDP3A0"
 	},
 	{
 		"ZDWPowerupManaRegen",
@@ -859,7 +859,7 @@ str powerupData[6][3] = {
 	{
 		"ZDWPowerupManaPickup",
 		"Double Mana Pickups!",
-		"ZPM5A0"
+		"ZDP5A0"
 	}
 };
 
@@ -1206,7 +1206,11 @@ script "ZDW5CP Game Start" OPEN
 int manaRegenRunning[64];
 
 script "Team Mana Balance" ENTER
-{	
+{
+	GiveInventory("ZDWMapGiver", 1);
+	//ConsoleCommand("am_showthingsprites 3");
+	//ConsoleCommand("am_textured 1");
+	
 	int iAmHere = PlayerNumber();
 	
 	int manaDelay;
@@ -1237,7 +1241,10 @@ script "Team Mana Balance" ENTER
 		
 		manaRegenRunning[iAmHere] = 1;
 		
-		Delay(manaDelay);
+		if (CheckInventory("PowerZDWManaRegen"))
+			Delay(manaDelay / 2);
+		else
+			Delay(manaDelay);
 		
 		GiveInventory("Mana",1);
 		
@@ -1252,7 +1259,11 @@ script "Team Mana Balance" ENTER
 }
 
 script "Team Mana Balance Re" RESPAWN
-{	
+{
+	GiveInventory("ZDWMapGiver", 1);
+	//ConsoleCommand("am_showthingsprites 3");
+	//ConsoleCommand("am_textured 1");
+	
 	int iAmHere = PlayerNumber();
 	
 	int manaDelay;
@@ -1283,7 +1294,10 @@ script "Team Mana Balance Re" RESPAWN
 		
 		manaRegenRunning[iAmHere] = 1;
 		
-		Delay(manaDelay);
+		if (CheckInventory("PowerZDWManaRegen"))
+			Delay(manaDelay / 2);
+		else
+			Delay(manaDelay);
 		
 		GiveInventory("Mana",1);
 		
@@ -1331,7 +1345,10 @@ script "Team Hero Mana Balance" ENTER
 		
 		heroManaRegenRunning[iAmHere] = 1;
 		
-		Delay(heroManaDelay);
+		if (CheckInventory("PowerZDWManaRegen"))
+			Delay(heroManaDelay / 2);
+		else
+			Delay(heroManaDelay);
 		
 		GiveInventory("HeroMana",1);
 	}
@@ -1371,7 +1388,10 @@ script "Team Hero Mana Balance Re" RESPAWN
 		
 		heroManaRegenRunning[iAmHere] = 1;
 		
-		Delay(heroManaDelay);
+		if (CheckInventory("PowerZDWManaRegen"))
+			Delay(heroManaDelay / 2);
+		else
+			Delay(heroManaDelay);
 		
 		GiveInventory("HeroMana",1);
 	}
@@ -1413,11 +1433,11 @@ script "ZDW5CP Team Actions" ENTER
 			case TA_ANNOUNCER_UNDER_ATTACK:
 				LocalAmbientSound("announcer/5cp/underattack",255);
 				break;
-				/*
+				
 			case TA_ANNOUNCER_LAST_POINT:
 				LocalAmbientSound("announcer/5cp/finalpoint",255);
 				break;
-				
+			/*
 			case TA_ANNOUNCER_WELL_PLAYED:
 				LocalAmbientSound("announcer/5cp/wellplayed",255);
 				break;
@@ -1476,11 +1496,11 @@ script "ZDW5CP Team Actions Re" RESPAWN
 			case TA_ANNOUNCER_UNDER_ATTACK:
 				LocalAmbientSound("announcer/5cp/underattack",255);
 				break;
-				/*
+			
 			case TA_ANNOUNCER_LAST_POINT:
 				LocalAmbientSound("announcer/5cp/finalpoint",255);
 				break;
-				
+			/*
 			case TA_ANNOUNCER_WELL_PLAYED:
 				LocalAmbientSound("announcer/5cp/wellplayed",255);
 				break;

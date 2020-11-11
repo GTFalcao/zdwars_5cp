@@ -360,3 +360,32 @@ actor ZDW5CPRedMana : RedMana replaces RedMana {
 			stop
 	}
 }
+
+ACTOR Scanner2 : Scanner
+{
+	powerup.duration 0x7ffffffd
+  +INVENTORY.AUTOACTIVATE
+  states
+  {
+  Spawn:
+    TNT1 A -1
+    loop
+  }
+}
+
+ACTOR ZDWMapGiver : CustomInventory
+{
+  +INVENTORY.AUTOACTIVATE
+  +INVENTORY.ALWAYSPICKUP
+  -INVENTORY.PICKUPFLASH
+  states
+  {
+  Spawn:
+    TNT1 A -1
+    stop
+  Pickup:
+    TNT1 A 0 A_GiveInventory("Allmap",1)
+    TNT1 A 0 A_GiveInventory("Scanner2",1)
+    stop
+    }
+}

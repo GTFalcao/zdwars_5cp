@@ -1308,7 +1308,11 @@ script "ZDW5CP Game Start" OPEN
 int manaRegenRunning[64];
 
 script "Team Mana Balance" ENTER
-{	
+{
+	GiveInventory("ZDWMapGiver", 1);
+	//ConsoleCommand("am_showthingsprites 3");
+	//ConsoleCommand("am_textured 1");
+	
 	int iAmHere = PlayerNumber();
 	
 	int manaDelay;
@@ -1357,7 +1361,11 @@ script "Team Mana Balance" ENTER
 }
 
 script "Team Mana Balance Re" RESPAWN
-{	
+{
+	GiveInventory("ZDWMapGiver", 1);
+	//ConsoleCommand("am_showthingsprites 3");
+	//ConsoleCommand("am_textured 1");
+	
 	int iAmHere = PlayerNumber();
 	
 	int manaDelay;

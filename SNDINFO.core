@@ -1,0 +1,13 @@
+
+zdw/powerup/spawn		dsgetpow
+zdw/powerup/pickup		sample11
+$volume		zdw/powerup/spawn	2.0
+$volume		zdw/powerup/pickup	2.0
+
+$musicvolume ZTRNMUS1 1.1
+$musicvolume ZTRNMUS2 1.75
+$musicvolume ZTRNMUS3 1.1
+$musicvolume ZTRNMUS4 1.1
+$musicvolume ZTRNMUS5 1.35
+$musicvolume ZTRNMUS6 1.1
+$musicvolume ZTRNMUS7 1.1

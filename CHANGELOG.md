@@ -1,12 +1,14 @@
 
 
-# Revision [current]:
+# Revision 2020-11-12:
 
 * Fixed incorrect announcer lines in asymmetric mode
 
+* ZDW5CP4 (Discord): fixed inacessible powerup spot
+
 * ZDW5CP8 (Hectic): fixed missing music
 
-* ZDW5CP4 (Discord): fixed inacessible powerup spot
+* Added map Moon Base by Vilde, in map slots ZDW5CP13 (mirror mode) and ZDW5CP14 (neutral mode)
 
 
 

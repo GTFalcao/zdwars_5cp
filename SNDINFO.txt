@@ -1,5 +1,0 @@
-
-zdw/powerup/spawn		dsgetpow
-zdw/powerup/pickup		sample11
-$volume		zdw/powerup/spawn	2.0
-$volume		zdw/powerup/pickup	2.0

@@ -1,0 +1,265 @@
+actor ZDWPowerup : CustomInventory {
+	inventory.pickupsound "zdw/powerup/pickup"
+	inventory.pickupmessage "Special Powerup obtained!"
+	height 32
+	radius 24
+	+INVENTORY.AUTOACTIVATE
+	+INVENTORY.ALWAYSPICKUP
+	states {
+		FadeOut:
+			"----" A 2 A_FadeOut(0.1)
+			wait
+	}
+}
+
+actor ZDWPowerupMapMarker : MapMarker {
+	scale 0.35
+	states {
+		FadeOut:
+			"----" A 2 A_FadeOut(0.1)
+			wait
+	}
+}
+
+actor ZDWPowerupSpark
+{
+	+NOBLOCKMAP
+	+NOINTERACTION
+	+CLIENTSIDEONLY
+	scale 0.65
+	renderstyle add
+	alpha 0.8
+	states
+	{
+		Spawn:
+			ZDPX ABCDE 4 bright
+			stop
+	}
+}
+
+// 0 - Speed
+actor ZDWPowerupSpeed : ZDWPowerup {
+	scale 1.1
+	states {
+		Spawn:
+			ZDP0 ABCDEFGH 3 bright A_SpawnItemEx("ZDWPowerupSpark", random(-32, 32), random(-32, 32), random(8, 24), 0, 0, frandom(3.0, 8.0), 0, SXF_CLIENTSIDE)
+			loop
+		Pickup:
+			TNT1 A 0 ACS_ExecuteAlways(203, 0, 0)
+			TNT1 A 0 A_GiveInventory("ZDWPowerupGiverSpeed", 1)
+			stop
+	}
+}
+actor ZDWPowerupGiverSpeed : PowerupGiver {
+	+INVENTORY.AUTOACTIVATE
+	+INVENTORY.ALWAYSPICKUP
+	powerup.color "A0 A0 00" 0.2
+	powerup.duration -45
+	powerup.type "Speed"
+}
+actor ZDWPowerupSpeedMapMarker : ZDWPowerupMapMarker {
+	states {
+		Spawn:
+			ZPM0 ABCDEFGH 3 bright
+			loop
+	}
+}
+
+// 1 - Rage
+actor ZDWPowerupRage : ZDWPowerup {
+	scale 1.25
+	states {
+		Spawn:
+			ZDP1 AABBCCDDEEFFGGHH 3 bright A_SpawnItemEx("ZDWPowerupSpark", random(-24, 24), random(-24, 24), random(8, 24), 0, 0, frandom(1.0, 5.0), 0, SXF_CLIENTSIDE)
+			loop
+		Pickup:
+			TNT1 A 0 ACS_ExecuteAlways(203, 0, 1)
+			TNT1 A 0 A_GiveInventory("ZDWPowerupGiverRage", 1)
+			stop
+	}
+}
+actor ZDWPowerupGiverRage : PowerupGiver {
+	+INVENTORY.AUTOACTIVATE
+	+INVENTORY.ALWAYSPICKUP
+	powerup.color "A0 00 00" 0.2
+	powerup.duration -30
+	powerup.type "DoubleFiringSpeed"
+}
+actor ZDWPowerupRageMapMarker : ZDWPowerupMapMarker {
+	states {
+		Spawn:
+			ZPM1 ABCDEFGH 6 bright
+			loop
+	}
+}
+
+// 2 - Invulnerability
+actor ZDWPowerupInvulnerability : ZDWPowerup {
+	scale 1.1
+	states {
+		Spawn:
+			ZDP2 AABBCCDD 3 bright A_SpawnItemEx("ZDWPowerupSpark", random(-24, 24), random(-24, 24), random(8, 24), 0, 0, frandom(1.0, 5.0), 0, SXF_CLIENTSIDE)
+			loop
+		Pickup:
+			TNT1 A 0 ACS_ExecuteAlways(203, 0, 2)
+			TNT1 A 0 A_GiveInventory("ZDWPowerupGiverInvulnerability", 1)
+			stop
+	}
+}
+actor ZDWPowerupGiverInvulnerability : PowerupGiver {
+	+INVENTORY.AUTOACTIVATE
+	+INVENTORY.ALWAYSPICKUP
+	powerup.color "00 80 00" 0.25
+	powerup.duration -30
+	powerup.type "Invulnerable"
+}
+actor ZDWPowerupInvulnerabilityMapMarker : ZDWPowerupMapMarker {
+	states {
+		Spawn:
+			ZPM2 ABCD 6 bright
+			loop
+	}
+}
+
+// 3 - Resistance
+actor ZDWPowerupResistance : ZDWPowerup {
+	scale 1.1
+	states {
+		Spawn:
+			ZDP3 AABBCCDD 3 bright A_SpawnItemEx("ZDWPowerupSpark", random(-24, 24), random(-24, 24), random(8, 24), 0, 0, frandom(1.0, 5.0), 0, SXF_CLIENTSIDE)
+			loop
+		Pickup:
+			TNT1 A 0 ACS_ExecuteAlways(203, 0, 3)
+			TNT1 A 0 A_GiveInventory("ZDWPowerupGiverResistance", 1)
+			stop
+	}
+}
+actor ZDWPowerupGiverResistance : PowerupGiver {
+	+INVENTORY.AUTOACTIVATE
+	+INVENTORY.ALWAYSPICKUP
+	powerup.color "90 FF 90" 0.2
+	powerup.duration -45
+	powerup.type "ZDWResistance"
+}
+actor PowerZDWResistance : PowerProtection
+{
+	damagefactor "normal", 0.35
+}
+actor ZDWPowerupResistanceMapMarker : ZDWPowerupMapMarker {
+	states {
+		Spawn:
+			ZPM3 ABCD 6 bright
+			loop
+	}
+}
+
+// 4 - Mana Regen
+
+actor ZDWPowerupManaRegen : ZDWPowerup {
+	scale 1.1
+	states {
+		Spawn:
+			ZDP4 A 3 bright A_SpawnItemEx("ZDWPowerupSpark", random(-24, 24), random(-24, 24), random(8, 24), 0, 0, frandom(1.0, 5.0), 0, SXF_CLIENTSIDE)
+			loop
+		Pickup:
+			TNT1 A 0 ACS_ExecuteAlways(203, 0, 4)
+			TNT1 A 0 A_GiveInventory("ZDWPowerupGiverManaRegen", 1)
+			stop
+	}
+}
+actor ZDWPowerupGiverManaRegen : PowerupGiver {
+	+INVENTORY.AUTOACTIVATE
+	+INVENTORY.ALWAYSPICKUP
+	powerup.color "A0 00 A0" 0.2
+	powerup.duration -25
+	powerup.type "ZDWManaRegen"
+}
+actor PowerZDWManaRegen : PowerProtection
+{
+	damagefactor "normal", 1.0
+}
+actor ZDWPowerupManaRegenMapMarker : ZDWPowerupMapMarker {
+	states {
+		Spawn:
+			ZPM4 A 6 bright
+			loop
+	}
+}
+
+// 5 - Mana Pickup
+
+actor ZDWPowerupManaPickup : ZDWPowerup {
+	scale 1.4
+	states {
+		Spawn:
+			ZDP5 A 3 bright A_SpawnItemEx("ZDWPowerupSpark", random(-24, 24), random(-24, 24), random(8, 24), 0, 0, frandom(1.0, 5.0), 0, SXF_CLIENTSIDE)
+			loop
+		Pickup:
+			TNT1 A 0 ACS_ExecuteAlways(203, 0, 5)
+			TNT1 A 0 A_GiveInventory("ZDWPowerupGiverManaPickup", 1)
+			stop
+	}
+}
+actor ZDWPowerupGiverManaPickup : PowerupGiver {
+	+INVENTORY.AUTOACTIVATE
+	+INVENTORY.ALWAYSPICKUP
+	powerup.color "00 00 A0" 0.2
+	powerup.duration -25
+	powerup.type "ZDWManaPickup"
+}
+actor PowerZDWManaPickup : PowerProtection
+{
+	damagefactor "normal", 1.0
+}
+actor ZDWPowerupManaPickupMapMarker : ZDWPowerupMapMarker {
+	states {
+		Spawn:
+			ZPM5 A 6 bright
+			loop
+	}
+}
+
+actor ZDW5CPGreenMana : GreenMana replaces GreenMana {
+	states {
+		Pickup:
+			TNT1 A 0 A_JumpIfInventory("PowerZDWManaPickup", 1, 1)
+			goto Super::Pickup
+			TNT1 A 0 A_JumpIf(ACS_ExecuteWithResult(130,13)==1,"NoMana")
+			TNT1 A 0 A_GiveInventory("ManaCounter",2)
+			TNT1 A 0 A_GiveInventory("Mana",2)
+			stop
+	}
+}
+actor ZDW5CPPinkMana : PinkMana replaces PinkMana {
+	states {
+		Pickup:
+			TNT1 A 0 A_JumpIfInventory("PowerZDWManaPickup", 1, 1)
+			goto Super::Pickup
+			TNT1 A 0 A_JumpIf(ACS_ExecuteWithResult(130,13)==1,"NoMana")
+			TNT1 A 0 A_GiveInventory("ManaCounter",10)
+			TNT1 A 0 A_GiveInventory("Mana",10)
+			stop
+	}
+}
+actor ZDW5CPBlueMana : BlueMana replaces BlueMana {
+	states {
+		Pickup:
+			TNT1 A 0 A_JumpIfInventory("PowerZDWManaPickup", 1, 1)
+			goto Super::Pickup
+			TNT1 A 0 A_JumpIf(ACS_ExecuteWithResult(130,13)==1,"NoMana")
+			TNT1 A 0 A_GiveInventory("ManaCounter",20)
+			TNT1 A 0 A_GiveInventory("Mana",20)
+			stop
+	}
+}
+actor ZDW5CPRedMana : RedMana replaces RedMana {
+	states {
+		Pickup:
+			TNT1 A 0 A_JumpIfInventory("PowerZDWManaPickup", 1, 1)
+			goto Super::Pickup
+			TNT1 A 0 A_JumpIf(ACS_ExecuteWithResult(130,13)==1,"NoMana")
+			TNT1 A 0 A_GiveInventory("ManaCounter",50)
+			TNT1 A 0 A_GiveInventory("Mana",50)
+			stop
+	}
+}

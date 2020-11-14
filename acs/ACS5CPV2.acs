@@ -1,4 +1,3 @@
-
 #library "ACS5CPV2"
 #include "zcommon.acs"
 
@@ -1136,6 +1135,11 @@ script "ZDW5CP Game Start" OPEN
 	SetCVar("ZDW_ManaRegenerationSpeed",0);
 	SetCVar("ZDW_HeroManaRegenerationSpeed",0);
 	
+	if(GetCVar("ZDW_5CP_TournamentMusic")) {
+		int musNum = random(1, 7);
+		SetMusic(StrParam(s:"ZTRNMUS", i:musNum));
+	}
+	
 	while( (startMatchTimer > 0) && (PlayerCount() > 0) ) {
 	
 		SetFont("BIGFONT");
@@ -1207,7 +1211,7 @@ int manaRegenRunning[64];
 
 script "Team Mana Balance" ENTER
 {
-	GiveInventory("ZDWMapGiver", 1);
+	//GiveInventory("ZDWMapGiver", 1);
 	//ConsoleCommand("am_showthingsprites 3");
 	//ConsoleCommand("am_textured 1");
 	
@@ -1260,7 +1264,7 @@ script "Team Mana Balance" ENTER
 
 script "Team Mana Balance Re" RESPAWN
 {
-	GiveInventory("ZDWMapGiver", 1);
+	//GiveInventory("ZDWMapGiver", 1);
 	//ConsoleCommand("am_showthingsprites 3");
 	//ConsoleCommand("am_textured 1");
 	

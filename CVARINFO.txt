@@ -1,3 +1,4 @@
 server	noarchive	bool	ZDW_5CP_DisablePowerups			=	false;
+server	noarchive	bool		ZDW_5CP_TournamentMusic		=	false;
 server	noarchive	int		ZDW_5CP_PowerupRespawnTime		=	200;
 server	noarchive	int		ZDW_5CP_PowerupDespawnTime		=	100;
